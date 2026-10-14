@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="ต่อยอด Concept Card และ BMC ด้วย prompt การตลาด แบบจำลองการเงิน 3 ปี และแผนธุรกิจ — คณะเภสัชศาสตร์ มหาวิทยาลัยธรรมศาสตร์">
+<meta name="description" content="ต่อยอด Concept Card และ BMC ด้วย prompt เรื่องราว การตลาด แบบจำลองการเงิน 5 ปี และแผนธุรกิจ & pitch — คณะเภสัชศาสตร์ มหาวิทยาลัยธรรมศาสตร์">
 <link rel="icon" href="assets/mascot-ajarn-mee.png">
 <title>Canvas to Pitch Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -81,6 +81,9 @@ input[type=number]{font-variant-numeric:tabular-nums}
 .chips span{border-radius:6px;padding:2px 8px;background:var(--navyT);color:var(--fill)}
 .chips span.miss{background:var(--redT);color:var(--ph)}
 .chips span.fw{background:var(--goldT);color:var(--fg)}
+.chips span.sl{background:transparent;border:1px solid var(--line);color:var(--muted);font-weight:700}
+.sechead{margin:18px 2px 8px;font-size:15px;font-weight:800;color:var(--muted)}
+.sechead:first-child{margin-top:4px}
 .plist{display:grid;gap:12px}
 .prompt{border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
 .prompt > header{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:flex-start;padding:12px 14px}
@@ -120,7 +123,7 @@ input[type=number]{font-variant-numeric:tabular-nums}
 .seg button{border:0;border-radius:0}
 .seg button[aria-pressed="true"]{background:var(--navy);color:#fff}
 .tablewrap{overflow-x:auto}
-table.fs{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14.5px;min-width:520px}
+table.fs{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14.5px;min-width:640px}
 table.fs th,table.fs td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 table.fs th:first-child,table.fs td:first-child{text-align:left;white-space:normal}
 table.fs thead th{background:var(--sunk);font-weight:800}
@@ -185,7 +188,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
   const SK='canvas-pitch-v1';
 
   // ---------- defaults ----------
-  const FIN_DEF={price:390,unit_cost:140,channel_fee_pct:10,units_m1:150,growth_y1_pct:10,growth_y2_pct:4,growth_y3_pct:2,
+  const FIN_DEF={price:390,unit_cost:140,channel_fee_pct:10,units_m1:150,growth_y1_pct:10,growth_y2_pct:4,growth_y3_pct:2,growth_y4_pct:1,growth_y5_pct:1,
     marketing_month:25000,staff_month:30000,rent_month:5000,other_month:4000,fixed_growth_pct:5,
     startup_expense:80000,capex:120000,dep_years:5,credit_pct:0,equity:400000,loan:0,loan_rate_pct:6,loan_years:3,tax_pct:20};
   const FIN_META=[
@@ -194,7 +197,9 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
       ['units_m1','ยอดขายเดือนแรก','ชิ้น',''],
       ['growth_y1_pct','ยอดขายโตต่อเดือน ปีที่ 1','%',''],
       ['growth_y2_pct','ยอดขายโตต่อเดือน ปีที่ 2','%',''],
-      ['growth_y3_pct','ยอดขายโตต่อเดือน ปีที่ 3','%','']]],
+      ['growth_y3_pct','ยอดขายโตต่อเดือน ปีที่ 3','%',''],
+      ['growth_y4_pct','ยอดขายโตต่อเดือน ปีที่ 4','%',''],
+      ['growth_y5_pct','ยอดขายโตต่อเดือน ปีที่ 5','%','']]],
     ['ต้นทุนผันแปร (ตามจำนวนที่ขาย)',[
       ['unit_cost','ต้นทุนต่อชิ้น','บาท','ผลิต + บรรจุ + ค่าส่ง ต่อชิ้น'],
       ['channel_fee_pct','ค่าธรรมเนียมช่องทาง','% ของยอดขาย','แพลตฟอร์ม ผู้จัดจำหน่าย หรือส่วนแบ่งร้านค้า'],
@@ -222,21 +227,21 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
   // ---------- state ----------
   function load(){try{return JSON.parse(localStorage.getItem(SK))||{}}catch(e){return{}}}
   const st=load();
-  let info=Object.assign({name:'',product:'',model:'',cc:'',bmc:'',positioning:'',mnotes:'',draft:''},st.info||{});
+  let info=Object.assign({name:'',product:'',model:'',cc:'',bmc:'',positioning:'',mnotes:'',story:'',market:'',ops:'',draft:''},st.info||{});
   let fin=Object.assign({},FIN_DEF,st.fin||{});
   let tab=Number.isInteger(st.tab)?st.tab:0, scen=st.scen||'base';
   function save(){try{localStorage.setItem(SK,JSON.stringify({info,fin,tab,scen}))}catch(e){}}
 
   // ---------- model ----------
   function compute(f,sc){
-    const s=SCEN[sc]||SCEN.base, N=36, M=[];
+    const s=SCEN[sc]||SCEN.base, N=60, M=[];
     let units=0, arPrev=0, loanBal=+f.loan||0, cash=0, lossCF=0, cumNI=0, cumDep=0;
     const princ=(+f.loan_years>0)?(+f.loan||0)/(f.loan_years*12):0;
     const depM=(+f.dep_years>0)?(+f.capex||0)/(f.dep_years*12):0;
     let ebtYear=0, cumOp=0, payback=null, wasNeg=false;
     for(let m=1;m<=N;m++){
       const y=Math.ceil(m/12);
-      const g=[0,f.growth_y1_pct,f.growth_y2_pct,f.growth_y3_pct][y]/100;
+      const g=(+[0,f.growth_y1_pct,f.growth_y2_pct,f.growth_y3_pct,f.growth_y4_pct,f.growth_y5_pct][y]||0)/100;
       units = m===1 ? (+f.units_m1||0)*s.u : units*(1+g);
       const price=(+f.price||0)*s.p, rev=units*price;
       const cogs=units*(+f.unit_cost||0), fee=rev*(+f.channel_fee_pct||0)/100;
@@ -258,7 +263,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
       cumOp+=collected-opOut-capexM; if(cumOp<0)wasNeg=true; if(payback===null&&wasNeg&&cumOp>=0)payback=m;
       M.push({m,y,units,price,rev,cogs,fee,mkt,staff,rent,other,startup,dep,ebit,interest,ebt,tax,ni,ar,collected,pay,cash,loanBal,cumNI,cumDep,totalCost:cogs+fee+mkt+staff+rent+other+startup+dep+interest});
     }
-    const Y=[1,2,3].map(y=>{
+    const Y=[1,2,3,4,5].map(y=>{
       const r=M.filter(x=>x.y===y), sum=k=>r.reduce((a,b)=>a+b[k],0), last=r[r.length-1];
       const o={y,units:sum('units'),rev:sum('rev'),cogs:sum('cogs'),fee:sum('fee'),mkt:sum('mkt'),staff:sum('staff'),rent:sum('rent'),other:sum('other'),startup:sum('startup'),dep:sum('dep'),interest:sum('interest'),tax:sum('tax'),ni:sum('ni'),pay:sum('pay')};
       o.gp=o.rev-o.cogs-o.fee; o.opex=o.mkt+o.staff+o.rent+o.other+o.startup; o.ebit=o.gp-o.opex-o.dep; o.ebt=o.ebit-o.interest;
@@ -279,51 +284,79 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
 
   // ---------- formatting ----------
   const nf=new Intl.NumberFormat('th-TH',{maximumFractionDigits:0});
-  const fmt=v=>{if(!isFinite(v))return '—'; const r=Math.round(v); return r<0?'('+nf.format(-r)+')':nf.format(r)};
+  const fmt=v=>{if(!isFinite(v))return '—'; const r=Math.round(v)||0; return r<0?'('+nf.format(-r)+')':nf.format(r)};
   const fmtK=v=>{if(!isFinite(v))return '—'; const a=Math.abs(v); const s=v<0?'−':''; return a>=1e6?s+(a/1e6).toFixed(2)+' ล้าน':s+nf.format(Math.round(a))};
   const monthLabel=m=>'ด.'+m;
 
   // ---------- prompts ----------
-  const INFO_LBL={cc:'Concept Card',bmc:'BMC',positioning:'Positioning',mnotes:'สรุปการตลาด',fin:'สรุปการเงิน',draft:'ร่างแผน/สไลด์'};
+  const INFO_LBL={cc:'Concept Card',bmc:'BMC',positioning:'Positioning',mnotes:'สรุปการตลาด',story:'ปัญหาและนวัตกรรม',market:'ขนาดตลาด',ops:'แผนดำเนินงาน',fin:'สรุปการเงิน',draft:'ร่างแผน/สไลด์'};
   const KEYS_LIST=Object.keys(FIN_DEF).join(', ');
   const PROMPTS=[
-    {id:'M1',g:'m',t:'STP: เลือกลูกค้าเป้าหมาย',fw:'Segmentation · Targeting · Persona',needs:['cc','bmc'],
+    {id:'S1',sl:'1–4',g:'m',t:'ปัญหา insight และนวัตกรรม',fw:'Problem → Insight → Solution · Pains / Gains · Ten Types of Innovation',needs:['cc'],paste:'story',pasteL:'วางสรุปปัญหา insight ทางออก นวัตกรรม และ one-liner ที่เลือกแล้ว (ใช้ต่อในแผนธุรกิจและโครงสไลด์)',
+     R:'คุณคือโค้ชด้านนวัตกรรมผลิตภัณฑ์สุขภาพ ที่ช่วยนักวิจัยเล่าเรื่องโดยเริ่มจากปัญหาจริงของผู้ใช้ ไม่ใช่เริ่มจากเทคโนโลยี',
+     T:['Concept Card:\n{cc}','BMC:\n{bmc}','1) เขียนปัญหาให้ชัดใน 2–3 ประโยค: ใครเจอปัญหา เจอเมื่อไหร่ หนักแค่ไหน และตอนนี้เขาแก้อย่างไร แล้วบอกว่าข้อมูลหรือตัวเลขใดที่ควรหามายืนยัน\n2) insight: เหตุผลจริงที่เขายังติดปัญหาอยู่ ทั้งที่มีทางเลือกแล้ว เสนอ 3 แบบ\n3) ทางออกของฉันช่วยอย่างไร แยกเป็น pains ที่ลดลง gains ที่เพิ่มขึ้น และเหตุผลที่น่าเชื่อ (reason to believe) จากงานวิจัยของฉัน\n4) นวัตกรรมของฉันอยู่ในประเภทใดของ Ten Types of Innovation (เช่น ตัวผลิตภัณฑ์ ระบบผลิตภัณฑ์ บริการ ช่องทาง โมเดลรายได้ เครือข่าย) และประเภทใดที่ยังเพิ่มได้อีก\n5) one-liner บอกว่าเราคือใคร ช่วยใคร เรื่องอะไร 3 แบบ สำหรับสไลด์แรก'],
+     F:'5 หัวข้อตามลำดับ กระชับ ใช้ภาษาง่าย บอกให้ชัดว่าข้อไหนเป็นข้อสันนิษฐานที่ต้องไปตรวจกับผู้ใช้จริง ห้ามแต่งตัวเลขหรือสถิติ ถ้าต้องใช้ให้เขียน [ต้องหาข้อมูล]'},
+    {id:'S2',sl:'6',g:'m',t:'ตรวจ BMC ให้ครบ 9 ช่องและสอดคล้องกัน',fw:'Business Model Canvas · ตรวจความเชื่อมโยงระหว่างช่อง',needs:['bmc'],paste:'bmc',pasteL:'แก้ BMC ได้ที่นี่ (เป็นช่องเดียวกับในแท็บข้อมูลของฉัน ทุก prompt จะใช้ฉบับล่าสุด)',
+     R:'คุณคือกรรมการประเมิน Business Model Canvas ของธุรกิจสุขภาพ ที่ดูทั้งความครบถ้วนของแต่ละช่องและความเชื่อมโยงระหว่างช่อง',
+     T:['Concept Card:\n{cc}','BMC ของฉัน:\n{bmc}','Positioning: {positioning}','1) ตรวจทั้ง 9 ช่องว่าเขียนชัดและเจาะจงพอหรือไม่ ช่องไหนกว้างเกินไป ช่องไหนยังว่าง\n2) ตรวจความสอดคล้องเป็นคู่: กลุ่มลูกค้ากับคุณค่าที่เสนอ · คุณค่ากับช่องทางและความสัมพันธ์ลูกค้า · กิจกรรม ทรัพยากร และพาร์ทเนอร์ กับการส่งมอบคุณค่า · กระแสรายได้กับโครงสร้างต้นทุน\n3) ใครเป็นคนใช้ คนจ่าย และคนตัดสินใจ แล้ว BMC ตอบทั้งสามคนหรือยัง\n4) เสนอ BMC ฉบับปรับปรุง ช่องละ 2–4 วลี'],
+     F:'ตาราง: ช่อง | สิ่งที่เขียนไว้ | ปัญหาที่พบ | ข้อเสนอให้แก้ แล้วตามด้วย BMC ฉบับปรับปรุงในรูปแบบ CS: … VP: … CH: … CR: … R$: … KR: … KA: … KP: … C$: … ห้ามเพิ่มข้อมูลที่ฉันไม่ได้ให้ ถ้าต้องเดาให้ใส่ (?) ท้ายวลีนั้น'},
+    {id:'M1',sl:'7',g:'m',t:'STP: เลือกลูกค้าเป้าหมาย',fw:'Segmentation · Targeting · Persona',needs:['cc','bmc'],
      R:'คุณคือนักการตลาดผลิตภัณฑ์สุขภาพในประเทศไทย ที่ใช้กรอบ STP (Segmentation–Targeting–Positioning) และเข้าใจว่าในวงการสุขภาพ คนใช้ คนจ่าย และคนตัดสินใจมักเป็นคนละคน',
      T:['Concept Card ของฉัน:\n{cc}','BMC ของฉัน:\n{bmc}','1) แบ่งกลุ่มลูกค้าที่เป็นไปได้ 4 กลุ่ม ตามประชากร พฤติกรรม ความต้องการ และสถานการณ์ใช้ ระบุว่าใครคือคนใช้ คนจ่าย และคนตัดสินใจ\n2) ให้คะแนนแต่ละกลุ่ม 1–5 ใน 5 ด้าน: ขนาดตลาด ความรุนแรงของปัญหา ความสามารถจ่าย การเข้าถึงด้วยช่องทางของฉัน ความเข้ากับจุดแข็งของฉัน แล้วแนะนำกลุ่มเป้าหมายหลัก 1 กลุ่ม\n3) เขียน persona ของกลุ่มเป้าหมาย 1 คน: อายุ งาน หนึ่งวันของเขา ปัญหา สิ่งที่ใช้อยู่ตอนนี้ แหล่งข้อมูลที่เขาเชื่อ'],
      F:'ตารางคะแนน แล้วตามด้วย persona ไม่เกินครึ่งหน้า บอกว่าส่วนไหนเป็นข้อสันนิษฐานที่ต้องไปตรวจกับคนจริง ใช้ภาษาง่าย'},
-    {id:'M2',g:'m',t:'Positioning statement และ perceptual map',fw:'Points of Parity / Difference · Positioning · Perceptual map',needs:['cc','bmc'],paste:'positioning',pasteL:'วาง positioning statement ที่เลือกแล้ว (ใช้ต่อใน prompt อื่นและในรายงาน PDF)',
+    {id:'M2',sl:'5, 8',g:'m',t:'Positioning statement และ perceptual map',fw:'Points of Parity / Difference · Positioning · Perceptual map',needs:['cc','bmc'],paste:'positioning',pasteL:'วาง positioning statement ที่เลือกแล้ว (ใช้ต่อใน prompt อื่นและในรายงาน PDF)',
      R:'คุณคือผู้เชี่ยวชาญการวางตำแหน่งแบรนด์ (brand positioning) ในตลาดเครื่องสำอางและผลิตภัณฑ์สุขภาพไทย ที่รู้ว่าคำโฆษณาต้องตรงกับประเภทผลิตภัณฑ์และหลักฐาน',
      T:['Concept Card:\n{cc}','BMC:\n{bmc}','สรุปการตลาดที่มีอยู่: {mnotes}','1) จุดที่ต้องเท่าคู่แข่ง (Points of Parity) 3 ข้อ และจุดที่ต่าง (Points of Difference) 3 ข้อ พร้อมหลักฐานที่มีหรือที่ต้องหา\n2) เขียน positioning statement 3 แบบ ตามแม่แบบ "สำหรับ [กลุ่มเป้าหมาย] ที่ [ความต้องการ] [ชื่อ] คือ [ประเภทผลิตภัณฑ์] ที่ [ประโยชน์หลัก] ต่างจาก [สิ่งที่เขาใช้อยู่] เพราะ [เหตุผลที่เชื่อได้]"\n3) เสนอ 2 แกนสำหรับ perceptual map ที่ลูกค้าให้ความสำคัญจริง และวางตำแหน่งเรากับคู่แข่งหรือทางเลือก 4–5 ราย\n4) ชี้คำที่เกินหลักฐานหรือเกินประเภทผลิตภัณฑ์ พร้อมคำที่ปลอดภัยกว่า'],
      F:'4 หัวข้อตามลำดับ perceptual map เป็นตาราง: ชื่อ | แกน X (1–5) | แกน Y (1–5) | เหตุผล ห้ามแต่งชื่อบริษัทหรือข้อมูลที่ไม่มี ถ้าไม่แน่ใจให้เขียนว่า "ต้องตรวจสอบ"'},
-    {id:'M3',g:'m',t:'คู่แข่ง SWOT และกลยุทธ์ TOWS',fw:'Competitor map · SWOT · TOWS',needs:['cc','bmc'],
+    {id:'M3',sl:'8',g:'m',t:'คู่แข่ง SWOT และกลยุทธ์ TOWS',fw:'Competitor map · SWOT · TOWS',needs:['cc','bmc'],
      R:'คุณคือนักวิเคราะห์ตลาดและการแข่งขันในอุตสาหกรรมเครื่องสำอางและผลิตภัณฑ์สุขภาพของไทย ที่อ้างอิงเฉพาะข้อมูลที่ตรวจสอบได้',
      T:['Concept Card:\n{cc}','BMC:\n{bmc}','Positioning: {positioning}','1) คู่แข่งตรง คู่แข่งทางอ้อม และทางเลือกที่ลูกค้าใช้อยู่ (รวมถึงการไม่ทำอะไรเลย) อย่างละ 2–3 ราย บอกจุดแข็งจุดอ่อนของแต่ละราย\n2) วิเคราะห์ SWOT ของธุรกิจฉัน\n3) แปลงเป็นกลยุทธ์ TOWS: SO, WO, ST, WT ข้อละ 1–2 กลยุทธ์\n4) แหล่งข้อมูลที่ควรใช้ยืนยัน เช่น ฐานข้อมูล อย. รายงานประจำปีบริษัท งานวิจัย สถิติภาครัฐ'],
      F:'ตารางคู่แข่ง | ตาราง SWOT 2×2 | ตาราง TOWS ห้ามแต่งชื่อบริษัท ตัวเลข หรือส่วนแบ่งตลาด ถ้าไม่แน่ใจให้เขียนว่า "ต้องตรวจสอบ"'},
-    {id:'M4',g:'m',t:'Marketing mix (4P/7P) และการตั้งราคา',fw:'4P · 7P (บริการ) · Cost-plus / Competitor / Value-based pricing',needs:['cc','bmc'],
+    {id:'M4',sl:'9, 11',g:'m',t:'Marketing mix (4P/7P) และการตั้งราคา',fw:'4P · 7P (บริการ) · Cost-plus / Competitor / Value-based pricing',needs:['cc','bmc'],
      R:'คุณคือผู้วางแผนการตลาดผลิตภัณฑ์และบริการสุขภาพ ที่เชื่อมแผนการตลาดกับ Business Model Canvas',
      T:['BMC:\n{bmc}','Positioning: {positioning}','สรุปการตลาดที่มีอยู่: {mnotes}','1) วาง 4P ให้สอดคล้องกับ positioning ถ้าเป็นบริการให้เพิ่ม People, Process, Physical evidence เป็น 7P\n2) เสนอราคาด้วย 3 วิธี: บวกจากต้นทุน อิงราคาคู่แข่ง และอิงคุณค่าที่ลูกค้ารับรู้ แล้วแนะนำช่วงราคาที่เหมาะสม พร้อมสิ่งที่ต้องหาข้อมูลเพิ่ม\n3) ตรวจว่าแต่ละ P อยู่ในช่องไหนของ BMC และมีจุดที่ขัดกันหรือไม่'],
      F:'ตาราง: P | สิ่งที่จะทำ | ช่องใน BMC | เหตุผล แล้วตามด้วยตารางราคา 3 วิธี ใช้ช่วงตัวเลขได้ ห้ามแต่งราคาคู่แข่งถ้าไม่รู้จริง'},
-    {id:'M5',g:'m',t:'Customer journey ช่องทาง และคอนเทนต์',fw:'Customer journey (รู้จัก → สนใจ → ซื้อ → ใช้ → บอกต่อ) · Ecosystem',needs:['bmc'],
+    {id:'M5',sl:'9',g:'m',t:'Customer journey ช่องทาง และคอนเทนต์',fw:'Customer journey (รู้จัก → สนใจ → ซื้อ → ใช้ → บอกต่อ) · Ecosystem',needs:['bmc'],
      R:'คุณคือนักการตลาดดิจิทัลสายสุขภาพในประเทศไทย ที่รู้ข้อจำกัดของการโฆษณาตามประเภทผลิตภัณฑ์',
      T:['BMC:\n{bmc}','Positioning: {positioning}','1) วาด customer journey 5 ขั้น: รู้จัก → สนใจ → ตัดสินใจซื้อ → ใช้ → บอกต่อหรือซื้อซ้ำ แต่ละขั้นระบุ: ลูกค้าคิดอะไร จุดสัมผัสและช่องทาง ข้อความหลัก ตัวชี้วัด\n2) ไอเดียคอนเทนต์ 6 ชิ้นที่ไม่เกินหลักฐาน\n3) ใครในระบบนิเวศช่วยได้ในแต่ละขั้น เช่น เภสัชกร แพทย์ KOL ชุมชน พาร์ทเนอร์'],
      F:'ตาราง journey 5 แถว แล้วรายการคอนเทนต์ บอกว่าข้อความไหนต้องตรวจกับกฎหมายโฆษณาของประเภทผลิตภัณฑ์นั้น'},
-    {id:'M6',g:'m',t:'แผนการตลาด Insight → Plan → Implement → Control',fw:'Marketing process · SMART goals · KPI · งบการตลาด',needs:['cc','bmc'],paste:'mnotes',pasteL:'วางสรุปการตลาดของคุณ (กลุ่มเป้าหมาย 4P ช่องทาง เป้าหมาย งบ) ใช้ต่อใน prompt การเงินและแผนธุรกิจ',
+    {id:'M6',sl:'9',g:'m',t:'แผนการตลาด Insight → Plan → Implement → Control',fw:'Marketing process · SMART goals · KPI · งบการตลาด',needs:['cc','bmc'],paste:'mnotes',pasteL:'วางสรุปการตลาดของคุณ (กลุ่มเป้าหมาย 4P ช่องทาง เป้าหมาย งบ) ใช้ต่อใน prompt การเงินและแผนธุรกิจ',
      R:'คุณคือผู้จัดการการตลาดของธุรกิจสุขภาพขนาดเล็ก ที่วางแผนด้วยข้อมูลและวัดผลได้',
      T:['Concept Card:\n{cc}','BMC:\n{bmc}','Positioning: {positioning}','สรุปการตลาดที่มีอยู่: {mnotes}','เขียนแผนการตลาด 12 เดือนตามวงจร:\n1) Insight: ข้อค้นพบสำคัญ 3 ข้อ และสิ่งที่ยังต้องวิจัยตลาดเพิ่ม\n2) Plan: เป้าหมายแบบ SMART 3 ข้อ กลุ่มเป้าหมาย positioning และ 4P โดยย่อ\n3) Implement: แผนลงมือรายไตรมาส\n4) Control: KPI รายเดือน และเกณฑ์ว่าเมื่อไหร่ต้องปรับแผน\n5) งบการตลาดต่อเดือนโดยประมาณ แยกตามช่องทาง'],
      F:'5 หัวข้อตามลำดับ งบเป็นช่วงตัวเลขพร้อมสมมติฐาน ปิดท้ายด้วยสรุป 5 บรรทัดที่ฉันคัดลอกไปใช้ต่อได้'},
-    {id:'F1',g:'f',t:'ตั้งสมมติฐานการเงิน สำหรับแบบจำลอง',fw:'Unit economics · Fixed vs variable cost · Funding',needs:['bmc'],import:true,
+    {id:'M7',sl:'7',g:'m',t:'ขนาดตลาด TAM / SAM / SOM',fw:'Market sizing แบบ bottom-up และ top-down',needs:['bmc'],paste:'market',pasteL:'วางสรุปขนาดตลาดและวิธีประมาณ (ใช้ต่อในแผนธุรกิจและโครงสไลด์)',
+     R:'คุณคือนักวิเคราะห์ตลาดผลิตภัณฑ์สุขภาพในประเทศไทย ที่ประมาณขนาดตลาดอย่างโปร่งใส แสดงสมมติฐานทุกขั้น และไม่แต่งสถิติ',
+     T:['Concept Card:\n{cc}','BMC:\n{bmc}','สรุปการตลาด: {mnotes}','สรุปจากแบบจำลองการเงิน:\n{fin}','1) นิยาม TAM (ทุกคนที่มีปัญหานี้) SAM (ส่วนที่ช่องทางและโมเดลของฉันเข้าถึงได้) และ SOM (ส่วนที่ฉันน่าจะได้จริงในช่วง 5 ปีแรก) ให้ชัดสำหรับธุรกิจของฉัน\n2) ประมาณแบบ bottom-up: จำนวนลูกค้า × ความถี่ในการซื้อ × ราคา แสดงสูตรและสมมติฐานทุกตัว\n3) ประมาณแบบ top-down เพื่อเทียบ เฉพาะเมื่อมีแหล่งข้อมูลที่ตรวจสอบได้\n4) แหล่งข้อมูลที่ควรใช้ยืนยัน เช่น สำนักงานสถิติแห่งชาติ กระทรวงสาธารณสุข อย. สมาคมการค้า รายงานอุตสาหกรรม งานวิจัย\n5) เทียบ SOM กับยอดขายในแบบจำลองการเงินของฉัน ว่าสมเหตุสมผล ต่ำไป หรือสูงเกินไป'],
+     F:'ตาราง: ระดับ | นิยาม | สูตร | สมมติฐาน | ค่าประมาณ | แหล่งที่ต้องตรวจ ตัวเลขที่ไม่มีแหล่งให้ใส่ (เดา) ห้ามแต่งชื่อรายงานหรือสถิติ ปิดท้ายด้วยสรุป 3 บรรทัดสำหรับใส่สไลด์'},
+    {id:'F1',sl:'11–12',g:'f',t:'ตั้งสมมติฐานการเงิน สำหรับแบบจำลอง',fw:'Unit economics · Fixed vs variable cost · Funding',needs:['bmc'],import:true,
      R:'คุณคือที่ปรึกษาการเงินสำหรับธุรกิจผลิตภัณฑ์และบริการสุขภาพขนาดเล็กในประเทศไทย อธิบายด้วยภาษาง่าย และไม่แต่งตัวเลขที่ไม่มีที่มา',
-     T:['BMC:\n{bmc}','สรุปการตลาด: {mnotes}','ช่วยตั้งสมมติฐานการเงิน 3 ปี สำหรับแบบจำลองการเงินรายเดือน ใช้ key ต่อไปนี้เท่านั้น:\n'+KEYS_LIST+'\nความหมาย: price ราคาต่อชิ้น (บาท) · unit_cost ต้นทุนผันแปรต่อชิ้น · channel_fee_pct ค่าธรรมเนียมช่องทาง % · units_m1 ยอดขายเดือนแรก (ชิ้น) · growth_y1_pct/growth_y2_pct/growth_y3_pct การเติบโตต่อเดือน % · marketing_month staff_month rent_month other_month ค่าใช้จ่ายคงที่ต่อเดือน · fixed_growth_pct การเพิ่มของค่าใช้จ่ายคงที่ต่อปี % · startup_expense ค่าใช้จ่ายก่อนเปิดขาย · capex เครื่องมือ/สินทรัพย์ · dep_years อายุใช้งาน · credit_pct ยอดขายที่ได้เงินช้า 1 เดือน % · equity เงินทุนเจ้าของ · loan เงินกู้ · loan_rate_pct ดอกเบี้ยต่อปี · loan_years ปีที่ผ่อน · tax_pct อัตราภาษี\nถ้าข้อมูลไม่พอ ให้ประมาณแบบระมัดระวัง และบอกในตารางว่าเป็นค่าที่เดา'],
+     T:['BMC:\n{bmc}','สรุปการตลาด: {mnotes}','ช่วยตั้งสมมติฐานการเงิน 5 ปี สำหรับแบบจำลองการเงินรายเดือน (60 เดือน) ใช้ key ต่อไปนี้เท่านั้น:\n'+KEYS_LIST+'\nความหมาย: price ราคาต่อชิ้น (บาท) · unit_cost ต้นทุนผันแปรต่อชิ้น · channel_fee_pct ค่าธรรมเนียมช่องทาง % · units_m1 ยอดขายเดือนแรก (ชิ้น) · growth_y1_pct ถึง growth_y5_pct การเติบโตของยอดขายต่อเดือนในแต่ละปี % (ปีหลัง ๆ ควรโตช้าลง) · marketing_month staff_month rent_month other_month ค่าใช้จ่ายคงที่ต่อเดือน · fixed_growth_pct การเพิ่มของค่าใช้จ่ายคงที่ต่อปี % · startup_expense ค่าใช้จ่ายก่อนเปิดขาย · capex เครื่องมือ/สินทรัพย์ · dep_years อายุใช้งาน · credit_pct ยอดขายที่ได้เงินช้า 1 เดือน % · equity เงินทุนเจ้าของ · loan เงินกู้ · loan_rate_pct ดอกเบี้ยต่อปี · loan_years ปีที่ผ่อน · tax_pct อัตราภาษี\nถ้าข้อมูลไม่พอ ให้ประมาณแบบระมัดระวัง และบอกในตารางว่าเป็นค่าที่เดา'],
      F:'ส่วนที่ 1: บล็อกโค้ดหนึ่งบล็อก บรรทัดละ key = value เป็นตัวเลขล้วน ไม่มีหน่วย ไม่มีจุลภาค\nส่วนที่ 2: ตาราง key | ค่า | เหตุผล | ควรตรวจจากแหล่งไหน | (เดา) หรือ (มีข้อมูล)'},
-    {id:'B1',g:'b',t:'ร่างแผนธุรกิจฉบับส่งอาจารย์',fw:'Business plan 12 หัวข้อ',needs:['cc','bmc','fin'],
+    {id:'P1',sl:'10',g:'b',t:'การดำเนินงาน พาร์ทเนอร์ กฎระเบียบ และคุณภาพ',fw:'Operations (คน เงิน ของ ข้อมูล เวลา) · เส้นทางกฎระเบียบ · ระบบคุณภาพ · IP',needs:['bmc'],paste:'ops',pasteL:'วางสรุปแผนดำเนินงานและเส้นทางกฎระเบียบ (ใช้ต่อในแผนธุรกิจและโครงสไลด์)',
+     R:'คุณคือผู้จัดการโครงการพัฒนาผลิตภัณฑ์สุขภาพ ที่เคยพาผลงานวิจัยไปถึงการผลิตและการขายในประเทศไทย และรู้ว่าแต่ละประเภทผลิตภัณฑ์มีเส้นทางกฎหมายต่างกัน',
+     T:['ผลิตภัณฑ์/บริการ: {product} · โมเดลธุรกิจ: {model}','Concept Card:\n{cc}','BMC:\n{bmc}','1) แผนดำเนินงานด้วยทรัพยากร 5 ด้าน: คน (ใครทำอะไร ทีมที่ยังขาด) · เงิน · ของ (วัตถุดิบ การผลิต บรรจุภัณฑ์ การขนส่ง) · ข้อมูล · เวลา\n2) พาร์ทเนอร์หลักที่ต้องมี เช่น โรงงานผลิต หน่วยจัดการทรัพย์สินทางปัญญาของมหาวิทยาลัย ผู้จัดจำหน่าย โรงพยาบาลหรือคลินิก ร้านยา และสิ่งที่แต่ละฝ่ายได้รับ\n3) ประเภทผลิตภัณฑ์ตามกฎหมายที่น่าจะเป็น (เช่น เครื่องสำอาง ผลิตภัณฑ์เสริมอาหาร ผลิตภัณฑ์สมุนไพร เครื่องมือแพทย์ ยา) เส้นทางจดแจ้งหรือขึ้นทะเบียนโดยย่อ และประเด็นที่ต้องไปตรวจกับ อย. หรือหน่วยงานที่เกี่ยวข้อง\n4) ระบบคุณภาพและความปลอดภัยที่ต้องมี เช่น มาตรฐานสถานที่ผลิต การทดสอบความคงตัว การทดสอบความปลอดภัย การรับเรื่องร้องเรียน\n5) ทรัพย์สินทางปัญญา: อะไรควรยื่นจด อะไรควรเก็บเป็นความลับ และควรทำก่อนเปิดเผยผลงานเมื่อไหร่'],
+     F:'5 หัวข้อ มีตารางพาร์ทเนอร์: พาร์ทเนอร์ | บทบาท | สิ่งที่เขาได้ | สถานะ (มีแล้ว/กำลังคุย/ยังไม่มี) ห้ามสรุปข้อกฎหมายแบบฟันธง ให้เขียนว่า "ต้องตรวจกับหน่วยงานที่รับผิดชอบ" และบอกแหล่งทางการที่ควรเปิดดู'},
+    {id:'P2',sl:'11–12',g:'b',t:'Unit economics ความต้องการเงินทุน และแผนใช้เงิน',fw:'Unit economics · Funding need · Use of funds · ตัวแปรที่อ่อนไหว',needs:['fin'],
+     R:'คุณคือที่ปรึกษาการเงินที่ช่วยผู้ประกอบการเล่าตัวเลขให้กรรมการเข้าใจได้ใน 2 สไลด์ และตอบคำถามเรื่องตัวเลขได้อย่างมั่นใจ',
+     T:['BMC:\n{bmc}','สรุปจากแบบจำลองการเงิน:\n{fin}','1) อธิบาย unit economics ด้วยภาษาง่าย: ขาย 1 ชิ้นได้เงินเท่าไร เหลือเท่าไรหลังหักต้นทุนผันแปร และต้องขายกี่ชิ้นต่อเดือนจึงคุ้มทุน\n2) ความต้องการเงินทุน: ควรระดมเงินเท่าไร โดยอิงเงินลงทุนเริ่มต้น เงินสดต่ำสุด และเงินสำรองอย่างน้อย 3 เดือน และควรมาจากแหล่งประเภทใด เช่น ทุนของตัวเอง ทุนวิจัยต่อยอด ทุนนวัตกรรมจากหน่วยงานรัฐ นักลงทุน หรือพาร์ทเนอร์\n3) แผนใช้เงิน (use of funds) แยกเป็นหมวด พร้อมสัดส่วน % และสิ่งที่จะได้จากเงินแต่ละก้อน (milestone)\n4) ตัวแปร 3 ตัวที่มีผลต่อผลลัพธ์มากที่สุด และบอกว่าควรลองปรับค่าใดในแบบจำลองเพื่อดูผล (เช่น ยอดขายลดลง 20%)\n5) ข้อความหลักสำหรับสไลด์ unit economics และสไลด์ประมาณการการเงิน 5 ปี อย่างละ 1 ประโยค'],
+     F:'5 หัวข้อ มีตาราง use of funds: หมวด | จำนวนเงิน | % | milestone ใช้เฉพาะตัวเลขจากสรุปแบบจำลอง ถ้าต้องเดาให้ใส่ (เดา) ห้ามอ้างชื่อแหล่งทุนหรือเงื่อนไขทุนที่ไม่แน่ใจ ให้เขียนว่า "ต้องตรวจประกาศล่าสุด"'},
+    {id:'P3',sl:'13–14',g:'b',t:'หลักฐาน ความเสี่ยง แผน 3–6–12 เดือน และสิ่งที่ขอ',fw:'ระดับของหลักฐาน · Risk register · Roadmap · The ask',needs:['cc','bmc'],
+     R:'คุณคือกรรมการ pitch ด้านนวัตกรรมสุขภาพ ที่ให้ความสำคัญกับหลักฐานและความซื่อตรงมากกว่าคำพูดสวย',
+     T:['Concept Card:\n{cc}','BMC:\n{bmc}','แผนดำเนินงานและกฎระเบียบ:\n{ops}','สรุปจากแบบจำลองการเงิน:\n{fin}','1) จัดหลักฐานที่ฉันมีเป็น 3 ระดับ: หลักฐานทางวิทยาศาสตร์ (ผลแล็บ การทดสอบ) · หลักฐานจากผู้ใช้ (สัมภาษณ์ ทดลองใช้ การสั่งจอง) · หลักฐานทางธุรกิจ (ใบเสนอราคา หนังสือแสดงความสนใจจากพาร์ทเนอร์) และบอกว่าแต่ละข้อรองรับข้อความใดในสไลด์\n2) สมมติฐานที่เสี่ยงที่สุด 3 ข้อ และวิธีทดสอบที่ถูกและเร็วที่สุด\n3) ตารางความเสี่ยง 5–6 ข้อ ครอบคลุมด้านเทคนิค ตลาด กฎระเบียบ การเงิน และทีม\n4) แผน 3–6–12 เดือน พร้อมตัวชี้วัดความสำเร็จของแต่ละช่วง\n5) สิ่งที่ขอจากผู้ฟัง (the ask) 1–2 ข้อแบบเจาะจง เช่น เงินทุน พาร์ทเนอร์ ผู้ทดลองใช้ หรือคำแนะนำจากผู้เชี่ยวชาญ'],
+     F:'ตารางหลักฐาน | ตารางความเสี่ยง: ความเสี่ยง | โอกาสเกิด (ต่ำ/กลาง/สูง) | ผลกระทบ | แผนรับมือ | ตาราง roadmap 3 ช่วง ห้ามแต่งหลักฐานที่ฉันไม่ได้ให้ ถ้ายังไม่มีให้เขียนว่า "ยังไม่มี — ต้องทำ"'},
+    {id:'P4',sl:'15–16',g:'b',t:'ความรับผิดชอบ บันทึกการใช้ AI และแหล่งอ้างอิง',fw:'Responsible business · AI use log · การหาแหล่งอ้างอิง',needs:['cc'],
+     R:'คุณคือผู้ช่วยด้านจริยธรรมการวิจัยและการเขียนเชิงวิชาการ ที่ช่วยให้ผลงานซื่อตรง ตรวจสอบได้ และใช้ AI อย่างโปร่งใส',
+     T:['ผลิตภัณฑ์/บริการ: {product}','Concept Card:\n{cc}','Positioning: {positioning}','1) ความรับผิดชอบต่อสังคมและจริยธรรม: ความปลอดภัยของผู้ใช้ เคลมที่ไม่เกินหลักฐาน การดูแลข้อมูลส่วนบุคคลตาม PDPA การแบ่งปันประโยชน์อย่างเป็นธรรม (เช่น กับชุมชนหรือแหล่งวัตถุดิบ) และผลต่อสิ่งแวดล้อม ด้านละ 1–2 แนวปฏิบัติ\n2) ตารางบันทึกการใช้ AI (AI use log) ให้ฉันเติมเอง: ขั้นตอน | เครื่องมือ AI | ใช้ทำอะไร | สิ่งที่ฉันตรวจและแก้เอง | ส่วนที่ไม่ได้ใช้\n3) ข้อความในงานของฉันที่ต้องมีแหล่งอ้างอิงรองรับ พร้อมประเภทแหล่งที่ควรค้น (เช่น PubMed, Scopus, ThaiJO, เว็บไซต์ อย., สำนักงานสถิติแห่งชาติ, รายงานประจำปีบริษัท) และคำค้นที่แนะนำ\n4) แม่แบบการเขียนอ้างอิงแบบ APA 7 สำหรับบทความวารสาร เว็บไซต์หน่วยงาน และรายงาน (แม่แบบเปล่า ไม่ใส่ชื่อจริง)'],
+     F:'4 หัวข้อ ห้ามสร้างรายการอ้างอิงหรือ DOI ขึ้นเอง ให้บอกเฉพาะคำค้นและแหล่งที่ควรค้น ฉันจะค้นและตรวจเอง (เกณฑ์รายงานต้องมีแหล่งอ้างอิงที่น่าเชื่อถืออย่างน้อย 2 แหล่ง)'},
+    {id:'B1',sl:'แผนธุรกิจ',g:'b',t:'ร่างแผนธุรกิจ',fw:'Business plan 12 หัวข้อ · ร่างแรกสำหรับเกลาต่อ',needs:['cc','bmc','fin'],
      R:'คุณคือที่ปรึกษาเขียนแผนธุรกิจสำหรับนักวิจัยด้านเครื่องสำอางและผลิตภัณฑ์สุขภาพ เขียนกระชับ เป็นวิชาการพอดี และซื่อตรงต่อข้อมูล',
-     T:['ชื่อ: {name} · ผลิตภัณฑ์/บริการ: {product} · โมเดลธุรกิจ: {model}','Concept Card:\n{cc}','BMC:\n{bmc}','Positioning: {positioning}','สรุปการตลาด:\n{mnotes}','สรุปจากแบบจำลองการเงิน:\n{fin}','เขียนร่างแผนธุรกิจตามหัวข้อ: 1 บทสรุปผู้บริหาร · 2 ปัญหาและโอกาส · 3 ผลิตภัณฑ์/บริการและนวัตกรรม · 4 ตลาด ลูกค้าเป้าหมาย และคู่แข่ง · 5 โมเดลธุรกิจ (BMC) · 6 แผนการตลาด · 7 แผนการดำเนินงาน (คน เงิน ของ ข้อมูล เวลา) · 8 กฎระเบียบและการขึ้นทะเบียน · 9 แผนการเงิน · 10 ความเสี่ยงและแผนรับมือ · 11 ความรับผิดชอบต่อสังคมและจริยธรรม · 12 แผนงาน 3–6–12 เดือน'],
-     F:'หัวข้อเรียงเลข ประมาณ 6–8 หน้า ใช้เฉพาะข้อมูลที่ให้ ถ้าขาดให้ใส่ [ต้องเติม] ห้ามแต่งตัวเลข สถิติ หรือแหล่งอ้างอิง ใส่ [อ้างอิง] ตรงที่ควรอ้างแหล่งที่เชื่อถือได้ (เกณฑ์รายงานต้องมีอย่างน้อย 2 แหล่ง)'},
-    {id:'B2',g:'b',t:'โครงสไลด์ pitch ตามเกณฑ์ และซ้อมถามตอบ',fw:'เกณฑ์ pitch 15 คะแนน · Storyline',needs:['cc','bmc','fin'],
+     T:['ชื่อ: {name} · ผลิตภัณฑ์/บริการ: {product} · โมเดลธุรกิจ: {model}','Concept Card:\n{cc}','BMC:\n{bmc}','Positioning: {positioning}','ปัญหา insight และนวัตกรรม:\n{story}','ขนาดตลาด:\n{market}','สรุปการตลาด:\n{mnotes}','แผนดำเนินงานและกฎระเบียบ:\n{ops}','สรุปจากแบบจำลองการเงิน:\n{fin}','เขียนร่างแรกของแผนธุรกิจตามหัวข้อ: 1 บทสรุปผู้บริหาร · 2 ปัญหาและโอกาส · 3 ผลิตภัณฑ์/บริการและนวัตกรรม · 4 ตลาด ลูกค้าเป้าหมาย และคู่แข่ง · 5 โมเดลธุรกิจ (BMC) · 6 แผนการตลาด · 7 แผนการดำเนินงาน (คน เงิน ของ ข้อมูล เวลา) · 8 กฎระเบียบและการขึ้นทะเบียน · 9 แผนการเงิน 5 ปี (สมมติฐาน งบกำไรขาดทุน กระแสเงินสด ความต้องการเงินทุน) · 10 ความเสี่ยงและแผนรับมือ · 11 ความรับผิดชอบต่อสังคมและจริยธรรม · 12 แผนงาน 3–6–12 เดือน'],
+     F:'หัวข้อเรียงเลข ประมาณ 6–8 หน้า ใช้เฉพาะข้อมูลที่ให้ ถ้าขาดให้ใส่ [ต้องเติม] ห้ามแต่งตัวเลข สถิติ หรือแหล่งอ้างอิง ใส่ [อ้างอิง] ตรงที่ควรอ้างแหล่งที่เชื่อถือได้ (เกณฑ์รายงานต้องมีอย่างน้อย 2 แหล่ง) นี่เป็นร่างแรกที่ฉันจะเกลาและเขียนใหม่ด้วยภาษาของฉันเอง จึงขอให้เน้นโครงและประเด็นที่ครบ มากกว่าสำนวนที่สวย'},
+    {id:'B2',sl:'1–17',g:'b',t:'วางเนื้อหาลงแม่แบบสไลด์ pitch และซ้อมถามตอบ',fw:'เกณฑ์ pitch 15 คะแนน · Storyline',needs:['cc','bmc','fin'],
      R:'คุณคือโค้ช pitch ธุรกิจสุขภาพ ที่ช่วยให้นำเสนอชัด น่าเชื่อ และไม่อวดเกินหลักฐาน',
-     T:['Concept Card:\n{cc}','BMC:\n{bmc}','Positioning: {positioning}','สรุปการเงิน:\n{fin}','เกณฑ์การให้คะแนน (รวม 15): Problem, Innovation & Value Proposition 2 · Business Model Canvas ครบ 9 ช่องและสอดคล้องกัน 4 · Market & Competitive Analysis 2 · Business & Financial Feasibility 2 · Business Pitching & Digital Communication 2 · Evidence, Integrity & Q&A 3','1) ออกแบบสไลด์ 10–12 หน้า แต่ละหน้าบอก: หัวข้อ ข้อความหลัก 1 ประโยค สิ่งที่แสดง (กราฟ ตาราง ภาพ) และเกณฑ์ที่ตอบ\n2) สคริปต์พูด 5 นาที\n3) คำถามที่กรรมการน่าจะถาม 6 ข้อ พร้อมแนวตอบที่ซื่อตรง ถ้ายังไม่รู้ให้บอกว่าจะหาคำตอบอย่างไร'],
-     F:'ตารางสไลด์ แล้วสคริปต์ แล้วคำถามพร้อมแนวตอบ ใช้ภาษาพูด'},
-    {id:'B3',g:'b',t:'ตรวจร่างก่อนส่งตามเกณฑ์',fw:'เกณฑ์รายงาน 10 คะแนน + เกณฑ์ pitch 15 คะแนน',needs:['draft'],paste:'draft',pasteL:'วางร่างแผนหรือเนื้อหาสไลด์ของคุณที่นี่ (หรือวางต่อท้าย prompt ในหน้าต่าง AI ก็ได้)',
+     T:['ชื่อ: {name} · ผลิตภัณฑ์/บริการ: {product} · โมเดลธุรกิจ: {model}','Concept Card:\n{cc}','BMC:\n{bmc}','Positioning: {positioning}','ปัญหา insight และนวัตกรรม:\n{story}','ขนาดตลาด:\n{market}','สรุปการตลาด:\n{mnotes}','แผนดำเนินงานและกฎระเบียบ:\n{ops}','สรุปการเงิน:\n{fin}','เกณฑ์การให้คะแนน (รวม 15): Problem, Innovation & Value Proposition 2 · Business Model Canvas ครบ 9 ช่องและสอดคล้องกัน 4 · Market & Competitive Analysis 2 · Business & Financial Feasibility 2 · Business Pitching & Digital Communication 2 · Evidence, Integrity & Q&A 3','1) วางเนื้อหาลงแม่แบบสไลด์ pitch ของรายวิชา 17 หน้า: 1 ชื่อและ one-liner · 2 ปัญหา · 3 insight · 4 ทางออกและนวัตกรรม · 5 คุณค่าที่เสนอและ positioning · 6 BMC · 7 ตลาด (TAM/SAM/SOM และ persona) · 8 คู่แข่งและ perceptual map · 9 แผนการตลาด (4P และเส้นทางลูกค้า) · 10 การดำเนินงาน พาร์ทเนอร์ กฎระเบียบ · 11 unit economics · 12 ประมาณการการเงิน 5 ปี ความต้องการเงินทุน และแผนใช้เงิน · 13 หลักฐานและความเสี่ยง · 14 แผน 3–6–12 เดือนและสิ่งที่ขอ · 15 ความรับผิดชอบและการใช้ AI (ถ้ามี) · 16 แหล่งอ้างอิง · 17 ขอบคุณและถามตอบ\nแต่ละหน้าบอก: หัวสไลด์เป็นประโยคที่บอกข้อสรุป ข้อความหลัก สิ่งที่แสดง (กราฟ ตาราง ภาพ) และเกณฑ์ที่ตอบ ถ้าหน้าไหนยังไม่มีข้อมูลให้เขียนว่า [ต้องเติม] และบอกว่าใช้ prompt ใดช่วยได้\n2) สคริปต์พูด 5 นาที\n3) คำถามที่กรรมการน่าจะถาม 6 ข้อ พร้อมแนวตอบที่ซื่อตรง ถ้ายังไม่รู้ให้บอกว่าจะหาคำตอบอย่างไร'],
+     F:'ตารางสไลด์ 17 แถว แล้วสคริปต์ แล้วคำถามพร้อมแนวตอบ ใช้ภาษาพูด ห้ามแต่งตัวเลขหรือหลักฐานที่ไม่มีในข้อมูลข้างต้น'},
+    {id:'B3',sl:'ทั้งชุด',g:'b',t:'ตรวจร่างก่อนส่งตามเกณฑ์',fw:'เกณฑ์รายงาน 10 คะแนน + เกณฑ์ pitch 15 คะแนน',needs:['draft'],paste:'draft',pasteL:'วางร่างแผนหรือเนื้อหาสไลด์ของคุณที่นี่ (หรือวางต่อท้าย prompt ในหน้าต่าง AI ก็ได้)',
      R:'คุณคือกรรมการประเมินที่เข้มงวด แต่ให้ feedback ที่นำไปแก้ได้จริง',
      T:['ร่างของฉัน:\n{draft}','ประเมินตามเกณฑ์รายงาน (ข้อละ 2 คะแนน): ความครบถ้วน · ความเรียบร้อย · ตรงประเด็นและไม่คัดลอก · การสะกดและตรรกะ · อ้างอิงน่าเชื่อถือ อย่างน้อย 2 แหล่ง\nและเกณฑ์ pitch (รวม 15): Problem/Innovation/VP 2 · BMC 4 · ตลาดและคู่แข่ง 2 · ความเป็นไปได้ทางธุรกิจและการเงิน 2 · การนำเสนอ 2 · หลักฐาน ความซื่อตรง และการตอบคำถาม 3\nชี้จุดที่ตัวเลขไม่สอดคล้องกัน ข้อความที่เกินหลักฐาน และจุดที่ต้องใส่อ้างอิง'],
      F:'ตารางคะแนนพร้อมเหตุผล แล้ว 5 สิ่งที่ควรแก้ก่อนส่ง เรียงจากสำคัญที่สุด'},
@@ -331,12 +364,14 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
 
   function finSummary(){
     const r=compute(fin,'base'), Y=r.Y;
-    return 'สถานการณ์ฐาน (แบบจำลอง 36 เดือน)\n'+
+    return 'สถานการณ์ฐาน (แบบจำลองรายเดือน 60 เดือน = 5 ปี)\n'+
       '• ราคา '+fmt(fin.price)+' บาท · ต้นทุนผันแปร '+fmt(fin.unit_cost)+' บาท/ชิ้น · ค่าธรรมเนียมช่องทาง '+fin.channel_fee_pct+'% · กำไรส่วนเกินต่อชิ้น '+fmt(r.contrib)+' บาท\n'+
       '• ค่าใช้จ่ายคงที่เดือนแรก '+fmt(r.fixedM)+' บาท → จุดคุ้มทุน '+(isFinite(r.beUnits)?fmt(r.beUnits)+' ชิ้น/เดือน':'ยังไม่คุ้มทุน (ราคาต่ำกว่าต้นทุน)')+(r.beMonth?' · กำไรจากการดำเนินงานเป็นบวกครั้งแรกเดือนที่ '+r.beMonth:'')+'\n'+
-      '• รายได้ ปี 1/2/3: '+[0,1,2].map(i=>fmt(Y[i].rev)).join(' / ')+' บาท\n'+
-      '• กำไรสุทธิ ปี 1/2/3: '+[0,1,2].map(i=>fmt(Y[i].ni)).join(' / ')+' บาท · อัตรากำไรขั้นต้นปี 1 '+(r.gm*100).toFixed(1)+'%\n'+
+      '• รายได้ ปี 1–5: '+Y.map(o=>fmt(o.rev)).join(' / ')+' บาท\n'+
+      '• กำไรขั้นต้น ปี 1–5: '+Y.map(o=>fmt(o.gp)).join(' / ')+' บาท\n'+
+      '• กำไรสุทธิ ปี 1–5: '+Y.map(o=>fmt(o.ni)).join(' / ')+' บาท · กำไรสะสม 5 ปี '+fmt(Y[4].retained)+' บาท · อัตรากำไรขั้นต้นปี 1 '+(r.gm*100).toFixed(1)+'%\n'+
       '• เงินลงทุนเริ่มต้น: ค่าใช้จ่ายก่อนเปิดขาย '+fmt(fin.startup_expense)+' + สินทรัพย์ '+fmt(fin.capex)+' บาท · แหล่งเงิน: ทุนเจ้าของ '+fmt(fin.equity)+' + เงินกู้ '+fmt(fin.loan)+' บาท\n'+
+      '• เงินสดปลายปี 1–5: '+Y.map(o=>fmt(o.cashEnd)).join(' / ')+' บาท\n'+
       '• เงินสดต่ำสุด '+fmt(r.minCash)+' บาท (เดือนที่ '+r.minM+')'+(r.minCash<0?' → ต้องหาเงินเพิ่มอย่างน้อย '+fmt(-r.minCash)+' บาท':'')+(r.payback?' · คืนทุนเดือนที่ '+r.payback:'')+'\n'+
       '• ตัวเลขทั้งหมดเป็นสมมติฐาน ต้องยืนยันด้วยข้อมูลจริงก่อนนำเสนอ';
   }
@@ -364,7 +399,8 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
   function go(i){tab=i;save();renderTabs();render();window.scrollTo({top:0})}
 
   function tipHTML(t){return '<div class="tip"><img alt="" src="'+MASCOT_SRC+'"><div><b>อ.หมี แนะนำ</b><p>'+t+'</p></div></div>'}
-  function chips(p){return '<div class="chips"><span class="fw">'+esc(p.fw)+'</span>'+p.needs.filter(k=>k!=='fin').map(k=>val(k)?'<span>มี '+INFO_LBL[k]+'</span>':'<span class="miss">ยังไม่มี '+INFO_LBL[k]+'</span>').join('')+'</div>'}
+  function chips(p){return '<div class="chips">'+(p.sl?'<span class="sl">'+(/^[0-9]/.test(p.sl)?'สไลด์ ':'')+esc(p.sl)+'</span>':'')+'<span class="fw">'+esc(p.fw)+'</span>'+p.needs.filter(k=>k!=='fin').map(k=>val(k)?'<span>มี '+INFO_LBL[k]+'</span>':'<span class="miss">ยังไม่มี '+INFO_LBL[k]+'</span>').join('')+'</div>'}
+  function secHTML(secs){return secs.map(([h,ids])=>'<h3 class="sechead">'+h+'</h3>'+ids.map(id=>promptHTML(PROMPTS.find(x=>x.id===id))).join('')).join('')}
   function promptHTML(p){
     let h='<article class="prompt '+p.g+'" data-p="'+p.id+'"><header><span class="code">'+p.id+'</span><div class="ttl"><b>'+esc(p.t)+'</b>'+chips(p)+'</div></header><div class="body">'+
       '<div class="promptbox" data-box="'+p.id+'">'+promptText(p,true)+'</div>'+
@@ -406,10 +442,9 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
       $('#toM').addEventListener('click',()=>go(1));
     }
     else if(tab===1){
-      const ps=PROMPTS.filter(p=>p.g==='m');
-      app.innerHTML='<section class="panel"><div class="card"><h2>2 · Prompt การตลาด</h2><p class="lead">ใช้ตามลำดับ M1 → M6 แต่ละ prompt ใช้กรอบคิดการตลาดหนึ่งชุด ผลจาก M2 (positioning) และ M6 (สรุปการตลาด) ให้วางกลับในช่องสีเขียว เพื่อใช้ต่อในแผนการเงินและแผนธุรกิจ</p></div>'+
+      app.innerHTML='<section class="panel"><div class="card"><h2>2 · Prompt เรื่องราว BMC และการตลาด</h2><p class="lead">เริ่มจาก S1–S2 ให้เรื่องและ BMC ชัดก่อน แล้วใช้ M1 → M7 ทีละกรอบคิด ป้ายสีเทาบอกว่าผลลัพธ์ใช้กับสไลด์หน้าไหนในแม่แบบ pitch ผลที่ได้ให้วางกลับในช่องใต้ prompt เพื่อใช้ต่อในแผนการเงิน แผนธุรกิจ และสไลด์</p></div>'+
         tipHTML('AI ช่วยร่างได้เร็ว แต่ชื่อคู่แข่ง ตัวเลข และข้อกฎหมาย ต้องตรวจกับแหล่งจริงเสมอ ห้ามใส่สูตรจริง ข้อมูลที่ยังไม่เผยแพร่ หรือข้อมูลผู้ป่วยลงใน AI สาธารณะ')+
-        '<div class="plist">'+ps.map(promptHTML).join('')+'</div></section>';
+        '<div class="plist">'+secHTML([['ก. ตั้งเรื่องให้ชัด: ปัญหา นวัตกรรม และ BMC',['S1','S2']],['ข. ลูกค้า ตลาด และคู่แข่ง',['M1','M2','M3','M7']],['ค. แผนการตลาด',['M4','M5','M6']]])+'</div></section>';
       bindPrompts(app);
     }
     else if(tab===2){
@@ -421,10 +456,9 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
     }
     else if(tab===3){ renderSim(app) }
     else {
-      const ps=PROMPTS.filter(p=>p.g==='b');
-      app.innerHTML='<section class="panel"><div class="card"><h2>5 · แผนธุรกิจ & Pitch</h2><p class="lead">prompt ในแท็บนี้ดึงสรุปจากแบบจำลองการเงินให้อัตโนมัติ ทุกครั้งที่ปรับตัวเลข ข้อความใน prompt จะเปลี่ยนตาม</p><div class="row" style="margin-top:10px"><button type="button" id="pdf2" class="primary">ส่งออกรายงานการเงิน (PDF)</button><span class="copied" id="pdfMsg2" hidden></span></div></div>'+
-        tipHTML('B1 ใช้ร่างแผนธุรกิจส่งอาจารย์ B2 ใช้วางโครงสไลด์ pitch ตามเกณฑ์ 15 คะแนน B3 ใช้ตรวจร่างก่อนส่ง แผนที่ได้ต้องแก้ให้เป็นภาษาของเรา และใส่อ้างอิงจริงอย่างน้อย 2 แหล่ง')+
-        '<div class="plist">'+ps.map(promptHTML).join('')+'</div></section>';
+      app.innerHTML='<section class="panel"><div class="card"><h2>5 · แผนธุรกิจ & Pitch</h2><p class="lead">prompt ในแท็บนี้ดึงสรุปจากแบบจำลองการเงิน 5 ปีให้อัตโนมัติ ทุกครั้งที่ปรับตัวเลข ข้อความใน prompt จะเปลี่ยนตาม</p><div class="row" style="margin-top:10px"><button type="button" id="pdf2" class="primary">ส่งออกรายงานการเงิน (PDF)</button><span class="copied" id="pdfMsg2" hidden></span></div></div>'+
+        tipHTML('P1–P4 ใช้เติมเนื้อหาที่สไลด์ pitch ต้องมี แต่ยังไม่ได้ทำในแท็บก่อน ๆ B1 ใช้ร่างแผนธุรกิจ B2 ใช้วางเนื้อหาลงแม่แบบสไลด์ pitch ตามเกณฑ์ 15 คะแนน B3 ใช้ตรวจร่างก่อนส่ง ทุกอย่างที่ได้เป็นร่างแรก ต้องเกลาให้เป็นภาษาและหลักฐานของเราเอง และใส่อ้างอิงจริงอย่างน้อย 2 แหล่ง')+
+        '<div class="plist">'+secHTML([['ก. เติมเนื้อหาที่สไลด์ต้องมี',['P1','P2','P3','P4']],['ข. ประกอบเป็นแผนธุรกิจและ pitch',['B1','B2','B3']]])+'</div></section>';
       bindPrompts(app); $('#pdf2').addEventListener('click',()=>exportPDF($('#pdfMsg2')));
     }
   }
@@ -436,7 +470,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
   // ---------- simulator ----------
   function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
   function renderSim(app){
-    app.innerHTML='<section class="panel"><div class="card"><h2>4 · จำลองการเงิน</h2><p class="lead">กรอกสมมติฐานทางซ้าย งบการเงิน 3 ปีและกราฟทางขวาจะคำนวณใหม่ทันที ตัวเลขตั้งต้นเป็นตัวอย่างสมมติของพลอย ให้แก้เป็นของคุณ</p>'+
+    app.innerHTML='<section class="panel"><div class="card"><h2>4 · จำลองการเงิน</h2><p class="lead">กรอกสมมติฐานทางซ้าย งบการเงิน 5 ปีและกราฟทางขวาจะคำนวณใหม่ทันที ตัวเลขตั้งต้นเป็นตัวอย่างสมมติของพลอย ให้แก้เป็นของคุณ</p>'+
       '<div class="row" style="margin-top:10px"><span class="note">สถานการณ์:</span><div class="seg" role="group" aria-label="สถานการณ์">'+Object.entries(SCEN).map(([k,s])=>'<button type="button" data-scen="'+k+'" aria-pressed="'+(k===scen)+'">'+s.n+'</button>').join('')+'</div>'+
       '<span style="flex:1"></span><button type="button" id="copyTSV">คัดลอกงบเป็นตาราง</button><button type="button" id="reset">กลับเป็นตัวอย่าง</button><button type="button" class="primary" id="pdf1">ส่งออก PDF</button></div>'+
       '<div class="row"><span class="copied" id="simMsg" hidden></span></div><p class="note" style="margin:6px 0 0">ระวัง = ยอดขาย 70% ราคา 95% ของฐาน · ดี = ยอดขาย 130% ของฐาน</p></div>'+
@@ -451,7 +485,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
       '<div class="card"><h3>งบแสดงฐานะการเงิน ณ สิ้นปี (บาท)</h3><div class="tablewrap" id="bsT"></div><p class="check" id="bsCheck"></p></div>'+
       '<details class="card ref"><summary><b>วิธีคำนวณและข้อจำกัด</b></summary><ul>'+
       '<li>ยอดขายโตแบบทบต้นทุกเดือน ตามอัตราของแต่ละปี</li><li>กำไรส่วนเกินต่อชิ้น = ราคา × (1 − ค่าธรรมเนียม%) − ต้นทุนต่อชิ้น · จุดคุ้มทุน = ค่าใช้จ่ายคงที่ต่อเดือน ÷ กำไรส่วนเกินต่อชิ้น</li>'+
-      '<li>ค่าใช้จ่ายก่อนเปิดขายลงเป็นค่าใช้จ่ายเดือนแรก · สินทรัพย์หักค่าเสื่อมราคาแบบเส้นตรง · เงินกู้ผ่อนเงินต้นเท่ากันทุกเดือน</li><li>ภาษีคิดและจ่ายปีละครั้งที่เดือน 12, 24, 36 (เงินสดจึงลดลงในเดือนนั้น) จากกำไรก่อนภาษี และยกขาดทุนไปหักปีถัดไปได้ ใช้อัตราเดียวแบบง่าย ไม่ใช่การคำนวณภาษีจริง</li>'+
+      '<li>ค่าใช้จ่ายก่อนเปิดขายลงเป็นค่าใช้จ่ายเดือนแรก · สินทรัพย์หักค่าเสื่อมราคาแบบเส้นตรง · เงินกู้ผ่อนเงินต้นเท่ากันทุกเดือน</li><li>ภาษีคิดและจ่ายปีละครั้งที่เดือน 12, 24, 36, 48 และ 60 (เงินสดจึงลดลงในเดือนนั้น) จากกำไรก่อนภาษี และยกขาดทุนไปหักปีถัดไปได้ ใช้อัตราเดียวแบบง่าย ไม่ใช่การคำนวณภาษีจริง</li>'+
       '<li>ไม่ได้คิดสินค้าคงคลัง เจ้าหนี้การค้า และภาษีมูลค่าเพิ่ม · ใช้เพื่อการเรียนรู้และ pitch เบื้องต้น ก่อนลงทุนจริงควรให้นักบัญชีตรวจ</li></ul></details>'+
       '</div></div></section>';
     $('#finForm').addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;const v=parseFloat(e.target.value);fin[k]=isFinite(v)?v:0;save();updateSim()});
@@ -469,10 +503,10 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
   function rowsCF(){return [['เงินสดต้นปี','cashBeg',''],['กำไรสุทธิ','ni','ind'],['บวก ค่าเสื่อมราคา','dep','ind'],['หัก ลูกหนี้เพิ่มขึ้น','dAR','ind'],['เงินสดจากการดำเนินงาน','cfo','sub'],['เงินสดจากการลงทุน','cfi','sub'],['เงินสดจากการจัดหาเงิน','cff','sub'],['เงินสดเพิ่ม (ลด) สุทธิ','net',''],['เงินสดปลายปี','cashEnd','tot']]}
   function rowsBS(){return [['เงินสด','cashEnd','ind'],['ลูกหนี้การค้า','ar','ind'],['สินทรัพย์ถาวรสุทธิ','fa','ind'],['รวมสินทรัพย์','assets','sub'],['เงินกู้คงเหลือ','loan','ind'],['ทุน','paid','ind'],['กำไร (ขาดทุน) สะสม','retained','ind'],['รวมหนี้สินและส่วนของเจ้าของ','le','tot']]}
   function tableHTML(rows,Y){
-    return '<table class="fs"><thead><tr><th>รายการ</th><th>ปีที่ 1</th><th>ปีที่ 2</th><th>ปีที่ 3</th></tr></thead><tbody>'+rows.map(([l,k,cls,sign])=>'<tr class="'+(cls||'')+'"><td>'+l+'</td>'+Y.map((o,i)=>{let v=k==='dAR'?-(o.ar-(i?Y[i-1].ar:0)):o[k]; if(sign===-1)v=-v; return '<td class="'+(v<0?'neg':'')+'">'+fmt(v)+'</td>'}).join('')+'</tr>').join('')+'</tbody></table>';
+    return '<table class="fs"><thead><tr><th>รายการ</th>'+Y.map(o=>'<th>ปีที่ '+o.y+'</th>').join('')+'</tr></thead><tbody>'+rows.map(([l,k,cls,sign])=>'<tr class="'+(cls||'')+'"><td>'+l+'</td>'+Y.map((o,i)=>{let v=k==='dAR'?-(o.ar-(i?Y[i-1].ar:0)):o[k]; if(sign===-1)v=-v; return '<td class="'+(v<0?'neg':'')+'">'+fmt(v)+'</td>'}).join('')+'</tr>').join('')+'</tbody></table>';
   }
   function tsv(){
-    const r=compute(fin,scen), Y=r.Y, out=['แบบจำลองการเงิน · สถานการณ์ '+SCEN[scen].n,'รายการ\tปีที่ 1\tปีที่ 2\tปีที่ 3'];
+    const r=compute(fin,scen), Y=r.Y, out=['แบบจำลองการเงิน · สถานการณ์ '+SCEN[scen].n,'รายการ\t'+Y.map(o=>'ปีที่ '+o.y).join('\t')];
     const add=(title,rows)=>{out.push('',title);rows.forEach(([l,k,c,sign])=>out.push(l+'\t'+Y.map((o,i)=>{let v=k==='dAR'?-(o.ar-(i?Y[i-1].ar:0)):o[k];if(sign===-1)v=-v;return Math.round(v)}).join('\t')))};
     add('งบกำไรขาดทุน',rowsIS());add('งบกระแสเงินสด',rowsCF());add('งบแสดงฐานะการเงิน',rowsBS());return out.join('\n');
   }
@@ -480,10 +514,10 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
     const items=[
       ['กำไรส่วนเกินต่อชิ้น',fmt(r.contrib)+' บาท','ราคาหลังหักค่าธรรมเนียม − ต้นทุนต่อชิ้น',r.contrib<=0?'bad':''],
       ['จุดคุ้มทุน',isFinite(r.beUnits)?fmt(r.beUnits)+' ชิ้น/เดือน':'ไม่ถึง','ค่าใช้จ่ายคงที่ '+fmt(r.fixedM)+' บาท/เดือน',isFinite(r.beUnits)?'':'bad'],
-      ['กำไรดำเนินงานเป็นบวก',r.beMonth?'เดือนที่ '+r.beMonth:'ไม่ถึงใน 3 ปี','EBIT รายเดือน ≥ 0 ครั้งแรก',r.beMonth?'good':'bad'],
+      ['กำไรดำเนินงานเป็นบวก',r.beMonth?'เดือนที่ '+r.beMonth:'ไม่ถึงใน 5 ปี','EBIT รายเดือน ≥ 0 ครั้งแรก',r.beMonth?'good':'bad'],
       ['เงินสดต่ำสุด',fmtK(r.minCash)+' บาท','เดือนที่ '+r.minM+(r.minCash<0?' · ต้องหาเงินเพิ่ม':''),r.minCash<0?'bad':''],
-      ['รายได้ปีที่ 3',fmtK(r.Y[2].rev)+' บาท','ปีที่ 1: '+fmtK(r.Y[0].rev),''],
-      ['กำไรสุทธิปีที่ 3',fmtK(r.Y[2].ni)+' บาท','อัตรากำไรขั้นต้นปีที่ 1: '+(r.gm*100).toFixed(1)+'%',r.Y[2].ni>=0?'good':'bad'],
+      ['รายได้ปีที่ 5',fmtK(r.Y[4].rev)+' บาท','ปีที่ 1: '+fmtK(r.Y[0].rev)+' · ปีที่ 3: '+fmtK(r.Y[2].rev),''],
+      ['กำไรสุทธิปีที่ 5',fmtK(r.Y[4].ni)+' บาท','กำไรสุทธิสะสม 5 ปี: '+fmtK(r.Y[4].retained)+' · อัตรากำไรขั้นต้นปีที่ 1: '+(r.gm*100).toFixed(1)+'%',r.Y[4].ni>=0?'good':'bad'],
     ];
     return items.map(([k,v,s,c])=>'<div class="kpi '+c+'"><div class="k">'+k+'</div><div class="v">'+v+'</div><div class="s">'+s+'</div></div>').join('');
   }
@@ -493,10 +527,10 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
     scales:{x:{ticks:{color:fg,font:{family:'Sarabun'},maxRotation:0,autoSkip:true,maxTicksLimit:12},grid:{color:grid}},y:{ticks:{color:fg,font:{family:'Sarabun'},callback:v=>fmtK(v)},grid:{color:grid}}}},extra||{})}
   function buildCharts(){
     if(!window.Chart)return;
-    const lbl=Array.from({length:36},(_,i)=>monthLabel(i+1));
+    const lbl=Array.from({length:60},(_,i)=>monthLabel(i+1));
     C1=new Chart($('#ch1'),{type:'line',data:{labels:lbl,datasets:[{label:'รายได้',data:[],borderColor:css('--c3'),backgroundColor:css('--c3'),pointRadius:0,borderWidth:2.5},{label:'ค่าใช้จ่ายรวม',data:[],borderColor:css('--c1'),backgroundColor:css('--c1'),pointRadius:0,borderWidth:2.5}]},options:chartOpts()});
     C2=new Chart($('#ch2'),{type:'line',data:{labels:lbl,datasets:[['low','ระวัง','--c1'],['base','ฐาน','--c2'],['high','ดี','--c3']].map(([k,n,c])=>({label:n,key:k,data:[],borderColor:css(c),backgroundColor:css(c),pointRadius:0,borderWidth:k==='base'?3:2,borderDash:k==='base'?[]:[6,4]}))},options:chartOpts()});
-    C3=new Chart($('#ch3'),{type:'bar',data:{labels:['ปีที่ 1','ปีที่ 2','ปีที่ 3'],datasets:[{label:'รายได้',data:[],backgroundColor:css('--c2')},{label:'กำไรขั้นต้น',data:[],backgroundColor:css('--c3')},{label:'กำไรสุทธิ',data:[],backgroundColor:css('--c4')}]},options:chartOpts()});
+    C3=new Chart($('#ch3'),{type:'bar',data:{labels:['ปีที่ 1','ปีที่ 2','ปีที่ 3','ปีที่ 4','ปีที่ 5'],datasets:[{label:'รายได้',data:[],backgroundColor:css('--c2')},{label:'กำไรขั้นต้น',data:[],backgroundColor:css('--c3')},{label:'กำไรสุทธิ',data:[],backgroundColor:css('--c4')}]},options:chartOpts()});
     C4=new Chart($('#ch4'),{type:'doughnut',data:{labels:['ต้นทุนผันแปร','ค่าธรรมเนียม','การตลาด','เงินเดือน','ค่าเช่า','อื่น ๆ','ก่อนเปิดขาย'],datasets:[{data:[],backgroundColor:['#C8102E','#E8798A','#F4CD00','#1D2D5F','#6E82C2','#9E9E9E','#006838'],borderColor:css('--surface'),borderWidth:2}]},
       options:{responsive:true,maintainAspectRatio:false,animation:{duration:250},plugins:{legend:{position:'right',labels:{color:css('--muted'),font:{family:'Sarabun'}}},tooltip:{callbacks:{label:c=>c.label+': '+fmt(c.parsed)+' บาท'}}}}});
     charts=[C1,C2,C3,C4];
@@ -527,15 +561,15 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
     if(!window.jspdf||!window.html2canvas||!window.Chart){show('โหลดเครื่องมือสร้าง PDF ไม่สำเร็จ ลองรีเฟรชหน้า');return}
     show('กำลังสร้าง PDF…');
     try{
-      const r=compute(fin,scen), Y=r.Y, lbl=Array.from({length:36},(_,i)=>monthLabel(i+1));
+      const r=compute(fin,scen), Y=r.Y, lbl=Array.from({length:60},(_,i)=>monthLabel(i+1));
       const img1=lightChart({type:'line',data:{labels:lbl,datasets:[{label:'รายได้',data:r.M.map(x=>x.rev),borderColor:'#006838',pointRadius:0,borderWidth:4},{label:'ค่าใช้จ่ายรวม',data:r.M.map(x=>x.totalCost),borderColor:'#C8102E',pointRadius:0,borderWidth:4}]}});
       const img2=lightChart({type:'line',data:{labels:lbl,datasets:[['low','ระวัง','#C8102E'],['base','ฐาน','#1D2D5F'],['high','ดี','#006838']].map(([k,n,c])=>({label:n,data:compute(fin,k).M.map(x=>x.cash),borderColor:c,pointRadius:0,borderWidth:k==='base'?5:3,borderDash:k==='base'?[]:[10,6]}))}});
-      const img3=lightChart({type:'bar',data:{labels:['ปีที่ 1','ปีที่ 2','ปีที่ 3'],datasets:[{label:'รายได้',data:Y.map(o=>o.rev),backgroundColor:'#1D2D5F'},{label:'กำไรขั้นต้น',data:Y.map(o=>o.gp),backgroundColor:'#006838'},{label:'กำไรสุทธิ',data:Y.map(o=>o.ni),backgroundColor:'#C99A00'}]}});
+      const img3=lightChart({type:'bar',data:{labels:['ปีที่ 1','ปีที่ 2','ปีที่ 3','ปีที่ 4','ปีที่ 5'],datasets:[{label:'รายได้',data:Y.map(o=>o.rev),backgroundColor:'#1D2D5F'},{label:'กำไรขั้นต้น',data:Y.map(o=>o.gp),backgroundColor:'#006838'},{label:'กำไรสุทธิ',data:Y.map(o=>o.ni),backgroundColor:'#C99A00'}]}});
       const y1=Y[0];
       const img4=lightChart({type:'doughnut',data:{labels:['ต้นทุนผันแปร','ค่าธรรมเนียม','การตลาด','เงินเดือน','ค่าเช่า','อื่น ๆ','ก่อนเปิดขาย'],datasets:[{data:[y1.cogs,y1.fee,y1.mkt,y1.staff,y1.rent,y1.other,y1.startup],backgroundColor:['#C8102E','#E8798A','#F4CD00','#1D2D5F','#6E82C2','#9E9E9E','#006838']}]}});
       const d=new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
       const foot=n=>'<div class="foot"><span>'+esc(info.product||'แผนธุรกิจ')+' · '+esc(info.name||'')+' · สถานการณ์ '+SCEN[scen].n+'</span><span>หน้า '+n+' · คณะเภสัชศาสตร์ มหาวิทยาลัยธรรมศาสตร์</span></div>';
-      const kp=[['กำไรส่วนเกินต่อชิ้น',fmt(r.contrib)+' บาท'],['จุดคุ้มทุน',isFinite(r.beUnits)?fmt(r.beUnits)+' ชิ้น/เดือน':'ไม่ถึง'],['กำไรดำเนินงานเป็นบวก',r.beMonth?'เดือนที่ '+r.beMonth:'ไม่ถึงใน 3 ปี'],['เงินสดต่ำสุด',fmt(r.minCash)+' บาท (ด.'+r.minM+')'],['รายได้ปีที่ 3',fmt(Y[2].rev)+' บาท'],['กำไรสุทธิปีที่ 3',fmt(Y[2].ni)+' บาท']];
+      const kp=[['กำไรส่วนเกินต่อชิ้น',fmt(r.contrib)+' บาท'],['จุดคุ้มทุน',isFinite(r.beUnits)?fmt(r.beUnits)+' ชิ้น/เดือน':'ไม่ถึง'],['กำไรดำเนินงานเป็นบวก',r.beMonth?'เดือนที่ '+r.beMonth:'ไม่ถึงใน 5 ปี'],['เงินสดต่ำสุด',fmt(r.minCash)+' บาท (ด.'+r.minM+')'],['รายได้ปีที่ 5',fmt(Y[4].rev)+' บาท'],['กำไรสุทธิปีที่ 5',fmt(Y[4].ni)+' บาท']];
       const assum=FIN_META.map(([g,rows])=>rows.map(([k,l,u])=>'<tr><td>'+l+'</td><td>'+fmt(fin[k])+' '+u+'</td></tr>').join('')).join('');
       const tbl=rows=>{const t=document.createElement('div');t.innerHTML=tableHTML(rows,Y);return t.innerHTML};
       const pages=[
@@ -570,5 +604,6 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
   renderTabs(); render();
 })();
 </script>
+
 </body>
 </html>
