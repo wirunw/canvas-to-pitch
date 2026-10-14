@@ -12,6 +12,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 /* Layout: red faculty band → sticky 5-tab bar (my work · marketing · assumptions · simulator · plan & pitch) → one panel at a time; simulator = inputs left, statements + charts right */
 :root{
@@ -456,10 +457,10 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
     }
     else if(tab===3){ renderSim(app) }
     else {
-      app.innerHTML='<section class="panel"><div class="card"><h2>5 · แผนธุรกิจ & Pitch</h2><p class="lead">prompt ในแท็บนี้ดึงสรุปจากแบบจำลองการเงิน 5 ปีให้อัตโนมัติ ทุกครั้งที่ปรับตัวเลข ข้อความใน prompt จะเปลี่ยนตาม</p><div class="row" style="margin-top:10px"><button type="button" id="pdf2" class="primary">ส่งออกรายงานการเงิน (PDF)</button><span class="copied" id="pdfMsg2" hidden></span></div></div>'+
+      app.innerHTML='<section class="panel"><div class="card"><h2>5 · แผนธุรกิจ & Pitch</h2><p class="lead">prompt ในแท็บนี้ดึงสรุปจากแบบจำลองการเงิน 5 ปีให้อัตโนมัติ ทุกครั้งที่ปรับตัวเลข ข้อความใน prompt จะเปลี่ยนตาม</p><div class="row" style="margin-top:10px"><button type="button" id="docx2" class="primary">ส่งออกผลงานทั้งหมด (Word)</button><button type="button" id="pdf2">ส่งออกรายงานการเงิน (PDF)</button><span class="copied" id="pdfMsg2" hidden></span></div></div>'+
         tipHTML('P1–P4 ใช้เติมเนื้อหาที่สไลด์ pitch ต้องมี แต่ยังไม่ได้ทำในแท็บก่อน ๆ B1 ใช้ร่างแผนธุรกิจ B2 ใช้วางเนื้อหาลงแม่แบบสไลด์ pitch ตามเกณฑ์ 15 คะแนน B3 ใช้ตรวจร่างก่อนส่ง ทุกอย่างที่ได้เป็นร่างแรก ต้องเกลาให้เป็นภาษาและหลักฐานของเราเอง และใส่อ้างอิงจริงอย่างน้อย 2 แหล่ง')+
         '<div class="plist">'+secHTML([['ก. เติมเนื้อหาที่สไลด์ต้องมี',['P1','P2','P3','P4']],['ข. ประกอบเป็นแผนธุรกิจและ pitch',['B1','B2','B3']]])+'</div></section>';
-      bindPrompts(app); $('#pdf2').addEventListener('click',()=>exportPDF($('#pdfMsg2')));
+      bindPrompts(app); $('#pdf2').addEventListener('click',()=>exportPDF($('#pdfMsg2'))); $('#docx2').addEventListener('click',()=>exportDocx($('#pdfMsg2')));
     }
   }
   function fld(k,l,type,ph,wide){
@@ -472,7 +473,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
   function renderSim(app){
     app.innerHTML='<section class="panel"><div class="card"><h2>4 · จำลองการเงิน</h2><p class="lead">กรอกสมมติฐานทางซ้าย งบการเงิน 5 ปีและกราฟทางขวาจะคำนวณใหม่ทันที ตัวเลขตั้งต้นเป็นตัวอย่างสมมติของพลอย ให้แก้เป็นของคุณ</p>'+
       '<div class="row" style="margin-top:10px"><span class="note">สถานการณ์:</span><div class="seg" role="group" aria-label="สถานการณ์">'+Object.entries(SCEN).map(([k,s])=>'<button type="button" data-scen="'+k+'" aria-pressed="'+(k===scen)+'">'+s.n+'</button>').join('')+'</div>'+
-      '<span style="flex:1"></span><button type="button" id="copyTSV">คัดลอกงบเป็นตาราง</button><button type="button" id="reset">กลับเป็นตัวอย่าง</button><button type="button" class="primary" id="pdf1">ส่งออก PDF</button></div>'+
+      '<span style="flex:1"></span><button type="button" id="copyTSV">คัดลอกงบเป็นตาราง</button><button type="button" id="reset">กลับเป็นตัวอย่าง</button><button type="button" id="docx1">ส่งออก Word</button><button type="button" class="primary" id="pdf1">ส่งออก PDF</button></div>'+
       '<div class="row"><span class="copied" id="simMsg" hidden></span></div><p class="note" style="margin:6px 0 0">ระวัง = ยอดขาย 70% ราคา 95% ของฐาน · ดี = ยอดขาย 130% ของฐาน</p></div>'+
       '<div class="sim"><form class="inputs" id="finForm" autocomplete="off">'+FIN_META.map(([g,rows])=>'<fieldset><legend>'+g+'</legend>'+rows.map(([k,l,u,h])=>'<div class="inp"><label for="n_'+k+'">'+l+' <span class="unit">('+u+')</span></label><input type="number" step="any" id="n_'+k+'" data-k="'+k+'" value="'+fin[k]+'">'+(h?'<div class="help">'+h+'</div>':'')+'</div>').join('')+'</fieldset>').join('')+'</form>'+
       '<div class="out"><div class="kpis" id="kpis"></div>'+
@@ -493,7 +494,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
     app.querySelectorAll('[data-scen]').forEach(b=>b.addEventListener('click',()=>{scen=b.dataset.scen;save();app.querySelectorAll('[data-scen]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.scen===scen));updateSim()}));
     let armed=null; $('#reset').addEventListener('click',e=>{const b=e.currentTarget; if(!armed){b.textContent='กดอีกครั้งเพื่อยืนยัน';armed=setTimeout(()=>{armed=null;b.textContent='กลับเป็นตัวอย่าง'},3000);return} clearTimeout(armed);armed=null;fin=Object.assign({},FIN_DEF);save();renderSim(app)});
     $('#copyTSV').addEventListener('click',()=>copy(tsv(),$('#simMsg'),$('#simMsg').parentNode,'คัดลอกงบแล้ว วางใน Excel หรือ Google Sheets ได้'));
-    $('#pdf1').addEventListener('click',()=>exportPDF($('#simMsg')));
+    $('#pdf1').addEventListener('click',()=>exportPDF($('#simMsg'))); $('#docx1').addEventListener('click',()=>exportDocx($('#simMsg')));
     buildCharts(); updateSim();
   }
   function rowsIS(Y){return [
@@ -599,6 +600,141 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
         else show('หน้านี้บันทึกไฟล์ไม่ได้ในมุมมองนี้ ใช้ปุ่ม “คัดลอกงบเป็นตาราง” แทน');
       } else { pdf.save(name); show('ดาวน์โหลด PDF แล้ว') }
     }catch(e){console.error(e);show('สร้าง PDF ไม่สำเร็จ: '+(e&&e.message||e))}
+  }
+
+  // ---------- Word (.docx) export : Pharm TU CI ----------
+  const DX={red:'C8102E',crim:'8B0000',gold:'F4CD00',navy:'1D2D5F',green:'006838',char:'2C2C2C',gray:'5F5F5F',line:'D9D6CF',navyT:'E8EBF4',sunk:'F1EFEA',parch:'FDF8EE'};
+  const xe=s=>String(s??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const TH=/[฀-๿]/;
+  function dRun(t,o){o=o||{};
+    return '<w:r><w:rPr>'+(o.b?'<w:b/><w:bCs/>':'')+(o.i?'<w:i/><w:iCs/>':'')+(o.color?'<w:color w:val="'+o.color+'"/>':'')+(o.sz?'<w:sz w:val="'+o.sz+'"/><w:szCs w:val="'+o.sz+'"/>':'')+'<w:lang w:val="th-TH" w:bidi="th-TH"/></w:rPr><w:t xml:space="preserve">'+xe(t)+'</w:t></w:r>'}
+  function dPara(runs,o){o=o||{};
+    const pp=(o.style?'<w:pStyle w:val="'+o.style+'"/>':'')+(o.keep?'<w:keepNext/>':'')+
+      (o.border?'<w:pBdr><w:'+o.border.side+' w:val="single" w:sz="'+(o.border.sz||8)+'" w:space="4" w:color="'+o.border.color+'"/></w:pBdr>':'')+
+      (o.shd?'<w:shd w:val="clear" w:color="auto" w:fill="'+o.shd+'"/>':'')+(o.tabs||'')+
+      (o.sp?'<w:spacing w:before="'+(o.sp[0]||0)+'" w:after="'+(o.sp[1]||0)+'"/>':'')+(o.ind?'<w:ind w:left="'+o.ind+'"/>':'')+(o.jc?'<w:jc w:val="'+o.jc+'"/>':'');
+    return '<w:p>'+(pp?'<w:pPr>'+pp+'</w:pPr>':'')+(typeof runs==='string'?runs:runs.join(''))+'</w:p>'}
+  // one paragraph per line of user text; Thai body text uses Thai Distributed
+  function dText(txt,o){o=o||{};const lines=String(txt||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    return lines.map(l=>{const bullet=/^([-•*·]|\d+[.)])\s+/.test(l);
+      return dPara(dRun(bullet?l.replace(/^[-•*·]\s+/,'• '):l,o.run),{jc:TH.test(l)&&!bullet&&l.length>60?'thaiDistribute':'left',ind:bullet?360:0,sp:[0,80]})}).join('')}
+  const H1=t=>dPara(dRun(t),{style:'Heading1',keep:true}), H2=t=>dPara(dRun(t),{style:'Heading2',keep:true});
+  function dCell(content,w,o){o=o||{};
+    return '<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/>'+(o.span?'<w:gridSpan w:val="'+o.span+'"/>':'')+(o.fill?'<w:shd w:val="clear" w:color="auto" w:fill="'+o.fill+'"/>':'')+'<w:vAlign w:val="center"/></w:tcPr>'+content+'</w:tc>'}
+  function dTable(rows,widths,o){o=o||{};const sz=o.sz||20;
+    const ln=s=>'<w:'+s+' w:val="single" w:sz="4" w:space="0" w:color="'+DX.line+'"/>';
+    const bd='<w:tblBorders>'+ln('top')+'<w:left w:val="nil"/>'+ln('bottom')+'<w:right w:val="nil"/>'+ln('insideH')+'<w:insideV w:val="nil"/></w:tblBorders>';
+    const head='<w:tblPr><w:tblW w:w="'+widths.reduce((a,b)=>a+b,0)+'" w:type="dxa"/>'+bd+'<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="90" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="90" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>'+widths.map(w=>'<w:gridCol w:w="'+w+'"/>').join('')+'</w:tblGrid>';
+    const body=rows.map((r,ri)=>{const isH=o.header&&ri===0, kind=r.kind||'', cells=r.cells||r;
+      const fill=isH?DX.navy:kind==='sub'?DX.navyT:kind==='grp'?DX.sunk:'';
+      return '<w:tr>'+(isH?'<w:trPr><w:tblHeader/><w:cantSplit/></w:trPr>':'<w:trPr><w:cantSplit/></w:trPr>')+cells.map((c,ci)=>{
+        const num=ci>0&&o.num, txt=String(c), neg=num&&/^\(/.test(txt);
+        const run=dRun(txt,{sz,b:isH||kind==='sub'||kind==='tot'||kind==='grp'||(o.boldFirst&&ci===0),color:isH?'FFFFFF':neg?DX.red:kind==='grp'?DX.navy:''});
+        const pp='<w:pPr>'+(kind==='tot'?'<w:pBdr><w:top w:val="single" w:sz="8" w:space="1" w:color="'+DX.char+'"/></w:pBdr>':'')+'<w:spacing w:before="0" w:after="0"/>'+(kind==='ind'&&ci===0?'<w:ind w:left="240"/>':'')+'<w:jc w:val="'+(num?'right':'left')+'"/></w:pPr>';
+        const content=String(c).split('\n').map(l=>'<w:p>'+pp+dRun(l,{sz,b:isH||kind==='sub'||kind==='tot'||kind==='grp'||(o.boldFirst&&ci===0),color:isH?'FFFFFF':neg?DX.red:kind==='grp'?DX.navy:''})+'</w:p>').join('');
+        return dCell(content,r.span&&ci===0?widths.reduce((a,b)=>a+b,0):widths[ci],{fill,span:r.span&&ci===0?widths.length:0})}).join('')+'</w:tr>'}).join('');
+    return '<w:tbl>'+head+body+'</w:tbl>'+dPara('',{sp:[0,60]})}
+  let imgSeq=0;
+  function dImg(rid,cxEmu,cyEmu,name){const id=++imgSeq+100;
+    return '<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+cxEmu+'" cy="'+cyEmu+'"/><wp:docPr id="'+id+'" name="'+xe(name)+'"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="'+id+'" name="'+xe(name)+'"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+rid+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cxEmu+'" cy="'+cyEmu+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>'}
+  const b64bytes=u=>{const s=atob(u.split(',')[1]);const a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a};
+  const imgSize=u=>new Promise(res=>{const im=new Image();im.onload=()=>res([im.naturalWidth||1,im.naturalHeight||1]);im.onerror=()=>res([1,1]);im.src=u});
+  const BMC_KEYS=[['CS','1 กลุ่มลูกค้า (Customer Segments)'],['VP','2 คุณค่าที่เสนอ (Value Propositions)'],['CH','3 ช่องทาง (Channels)'],['CR','4 ความสัมพันธ์ลูกค้า (Customer Relationships)'],['R$','5 กระแสรายได้ (Revenue Streams)'],['KR','6 ทรัพยากรหลัก (Key Resources)'],['KA','7 กิจกรรมหลัก (Key Activities)'],['KP','8 พาร์ทเนอร์หลัก (Key Partners)'],['C$','9 โครงสร้างต้นทุน (Cost Structure)']];
+  function parseBMC(t){const o={};let cur=null;
+    String(t||'').split(/\r?\n/).forEach(l=>{const m=l.match(/^\s*(CS|VP|CH|CR|R\$|RS|KR|KA|KP|C\$|CS\$)\s*[:：]\s*(.*)$/i);
+      if(m){cur=m[1].toUpperCase().replace(/^RS$/,'R$');o[cur]=(o[cur]?o[cur]+'\n':'')+m[2].trim()}else if(cur&&l.trim())o[cur]+='\n'+l.trim()});
+    return Object.keys(o).length>=3?o:null}
+
+  async function buildDocx(){
+    const r=compute(fin,scen), Y=r.Y; imgSeq=0;
+    const media=[]; // {name, bytes, rid}
+    const addMedia=(u,name)=>{const rid='rIdImg'+(media.length+1);media.push({name,bytes:b64bytes(u),rid});return rid};
+    const W=9638, EMU=635; // content width in twips; 1 twip = 635 EMU
+    const chart=(cfg,cap)=>{const u=lightChart(cfg);const rid=addMedia(u,'chart'+(media.length+1)+'.png');const cx=W*EMU, cy=Math.round(cx*560/1380);
+      return dPara(dImg(rid,cx,cy,cap),{jc:'center',sp:[60,40],keep:true})+dPara(dRun(cap,{sz:18,i:true,color:DX.gray}),{jc:'center',sp:[0,160]})};
+    const d=new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
+    let b='';
+    // title block
+    b+=dPara(dRun('รายงานผลงาน · PSC622 ผู้ประกอบการธุรกิจเครื่องสำอางและผลิตภัณฑ์สุขภาพ',{sz:20,color:DX.gray}),{sp:[0,40]});
+    b+=dPara(dRun(info.product||'แผนธุรกิจของฉัน'),{style:'Title'});
+    b+=dPara([dRun('จาก BMC สู่ Pitch',{b:true,color:DX.navy,sz:26})],{sp:[0,120]});
+    const meta=[['ผู้จัดทำ',info.name||'—'],['ผลิตภัณฑ์ / บริการ',info.product||'—'],['โมเดลธุรกิจ',info.model||'—'],['วันที่ส่งออก',d],['สถานการณ์การเงินในรายงาน',SCEN[scen].n]];
+    b+=dTable(meta,[3000,W-3000],{boldFirst:true,sz:21});
+    b+=dPara(dRun('เอกสารนี้รวบรวมจากข้อมูลที่กรอกในหน้าเว็บ “จาก BMC สู่ Pitch” เป็นฉบับร่างเพื่อเกลาต่อ ตัวเลขทางการเงินเป็นสมมติฐาน และข้อความที่ได้จาก AI ต้องตรวจกับแหล่งข้อมูลจริงก่อนใช้',{sz:19,i:true,color:DX.gray}),{shd:DX.parch,border:{side:'left',color:DX.red,sz:24},sp:[120,200],jc:'thaiDistribute'});
+    let n=0; const sec=t=>H1((++n)+'. '+t);
+    if(info.story){b+=sec('ปัญหา insight และนวัตกรรม')+dText(info.story)}
+    if(info.cc){b+=sec('Concept Card')+dText(info.cc)}
+    if(info.bmc){b+=sec('Business Model Canvas');const pb=parseBMC(info.bmc);
+      b+=pb?dTable([['ช่อง','เนื้อหา']].concat(BMC_KEYS.map(([k,l])=>[l,pb[k]||'—'])),[4300,W-4300],{header:true,boldFirst:true,sz:20}):dText(info.bmc)}
+    if(info.positioning){b+=sec('Positioning')+dText(info.positioning)}
+    if(info.market){b+=sec('ขนาดตลาด')+dText(info.market)}
+    if(info.mnotes){b+=sec('สรุปแผนการตลาด')+dText(info.mnotes)}
+    if(info.ops){b+=sec('การดำเนินงาน พาร์ทเนอร์ และกฎระเบียบ')+dText(info.ops)}
+    // finance
+    b+=sec('แบบจำลองการเงิน 5 ปี (สถานการณ์'+SCEN[scen].n+')');
+    b+=H2('ตัวชี้วัดสำคัญ');
+    b+=dTable([['ตัวชี้วัด','ค่า'],['กำไรส่วนเกินต่อชิ้น',fmt(r.contrib)+' บาท'],['จุดคุ้มทุน',isFinite(r.beUnits)?fmt(r.beUnits)+' ชิ้น/เดือน':'ไม่ถึง (ราคาต่ำกว่าต้นทุน)'],['กำไรดำเนินงานเป็นบวกครั้งแรก',r.beMonth?'เดือนที่ '+r.beMonth:'ไม่ถึงใน 5 ปี'],['เงินสดต่ำสุด',fmt(r.minCash)+' บาท (เดือนที่ '+r.minM+')'+(r.minCash<0?' ต้องหาเงินเพิ่ม':'')],['คืนทุน',r.payback?'เดือนที่ '+r.payback:'ยังไม่คืนทุนใน 5 ปี'],['รายได้ปีที่ 1 / ปีที่ 5',fmt(Y[0].rev)+' / '+fmt(Y[4].rev)+' บาท'],['กำไรสุทธิปีที่ 5 · กำไรสะสม 5 ปี',fmt(Y[4].ni)+' · '+fmt(Y[4].retained)+' บาท']],[4400,W-4400],{header:true,sz:20});
+    b+=H2('สมมติฐาน');
+    const ar=[['รายการ','ค่า']]; FIN_META.forEach(([g,rows])=>{ar.push({kind:'grp',span:true,cells:[g]});rows.forEach(([k,l,u])=>ar.push({kind:'ind',cells:[l,fmt(fin[k])+' '+u]}))});
+    b+=dTable(ar,[6000,W-6000],{header:true,sz:19});
+    const fsRows=rows=>[['รายการ'].concat(Y.map(o=>'ปีที่ '+o.y))].concat(rows.map(([l,k,cls,sign])=>({kind:cls||'',cells:[l].concat(Y.map((o,i)=>{let v=k==='dAR'?-(o.ar-(i?Y[i-1].ar:0)):o[k];if(sign===-1)v=-v;return fmt(v)}))})));
+    const fw=[3138,1300,1300,1300,1300,1300];
+    b+=H2('งบกำไรขาดทุน (บาท)')+dTable(fsRows(rowsIS()),fw,{header:true,num:true,sz:19});
+    b+=H2('งบกระแสเงินสด (บาท)')+dTable(fsRows(rowsCF()),fw,{header:true,num:true,sz:19});
+    b+=H2('งบแสดงฐานะการเงิน ณ สิ้นปี (บาท)')+dTable(fsRows(rowsBS()),fw,{header:true,num:true,sz:19});
+    if(Math.max(...Y.map(o=>Math.abs(o.diff)))<1) b+=dPara(dRun('ตรวจสอบแล้ว: สินทรัพย์ = หนี้สิน + ส่วนของเจ้าของ ทุกปี',{sz:18,color:DX.green}),{sp:[0,120]});
+    b+=dPara(dRun('วิธีคำนวณโดยย่อ: ยอดขายโตแบบทบต้นรายเดือนตามอัตราของแต่ละปี ค่าใช้จ่ายก่อนเปิดขายลงเป็นค่าใช้จ่ายเดือนแรก สินทรัพย์หักค่าเสื่อมราคาแบบเส้นตรง ภาษีคิดปีละครั้งด้วยอัตราเดียวและยกขาดทุนไปได้ ไม่ได้คิดสินค้าคงคลัง เจ้าหนี้การค้า และภาษีมูลค่าเพิ่ม',{sz:18,color:DX.gray}),{sp:[0,120],jc:'thaiDistribute'});
+    if(window.Chart){
+      const lbl=Array.from({length:60},(_,i)=>monthLabel(i+1));
+      b+=H2('กราฟ');
+      b+=chart({type:'bar',data:{labels:['ปีที่ 1','ปีที่ 2','ปีที่ 3','ปีที่ 4','ปีที่ 5'],datasets:[{label:'รายได้',data:Y.map(o=>o.rev),backgroundColor:'#1D2D5F'},{label:'กำไรขั้นต้น',data:Y.map(o=>o.gp),backgroundColor:'#006838'},{label:'กำไรสุทธิ',data:Y.map(o=>o.ni),backgroundColor:'#C99A00'}]}},'รายได้ กำไรขั้นต้น และกำไรสุทธิ รายปี');
+      b+=chart({type:'line',data:{labels:lbl,datasets:[['low','ระวัง','#C8102E'],['base','ฐาน','#1D2D5F'],['high','ดี','#006838']].map(([k,nm,c])=>({label:nm,data:compute(fin,k).M.map(x=>x.cash),borderColor:c,pointRadius:0,borderWidth:k==='base'?5:3,borderDash:k==='base'?[]:[10,6]}))}},'เงินสดคงเหลือรายเดือน 3 สถานการณ์ (ระวัง = ยอดขาย 70% ราคา 95% · ดี = ยอดขาย 130% ของฐาน)');
+      b+=chart({type:'line',data:{labels:lbl,datasets:[{label:'รายได้',data:r.M.map(x=>x.rev),borderColor:'#006838',pointRadius:0,borderWidth:4},{label:'ค่าใช้จ่ายรวม',data:r.M.map(x=>x.totalCost),borderColor:'#C8102E',pointRadius:0,borderWidth:4}]}},'รายได้และค่าใช้จ่ายรายเดือน');
+    }
+    if(info.draft){b+=sec('ร่างแผนธุรกิจ / เนื้อหาสไลด์')+dText(info.draft)}
+
+    // header logo
+    const [lw,lh]=await imgSize(LOGO_SRC); const logoBytes=b64bytes(LOGO_SRC); const lcy=Math.round(0.95*360000), lcx=Math.round(lcy*lw/lh);
+    const NS='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+    const X='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+    const header=X+'<w:hdr '+NS+'>'+dPara([dImg('rIdLogo',lcx,lcy,'Pharm TU logo'),'<w:r><w:tab/></w:r>',dRun('คณะเภสัชศาสตร์ มหาวิทยาลัยธรรมศาสตร์',{b:true,color:DX.red,sz:20}),dRun('  ·  วภส.622',{color:DX.gray,sz:18})],{border:{side:'bottom',color:DX.red,sz:12},tabs:'<w:tabs><w:tab w:val="right" w:pos="'+W+'"/></w:tabs>',sp:[0,0]})+'</w:hdr>';
+    const footer=X+'<w:ftr '+NS+'>'+dPara([dRun((info.product?info.product+'  ·  ':'')+'คณะเภสัชศาสตร์ มหาวิทยาลัยธรรมศาสตร์  |  pharm.tu.ac.th  |  หน้า ',{sz:16,color:DX.gray}),'<w:r><w:rPr><w:color w:val="'+DX.gray+'"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:rPr><w:color w:val="'+DX.gray+'"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:t>1</w:t></w:r><w:r><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:fldChar w:fldCharType="end"/></w:r>'],{jc:'center',border:{side:'top',color:'E8E8E8',sz:6},sp:[0,0]})+'</w:ftr>';
+    const sect='<w:sectPr><w:headerReference w:type="default" r:id="rIdHdr"/><w:footerReference w:type="default" r:id="rIdFtr"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1531" w:right="1134" w:bottom="1247" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr>';
+    const doc=X+'<w:document '+NS+'><w:body>'+b+sect+'</w:body></w:document>';
+    const F='<w:rFonts w:ascii="Sarabun" w:hAnsi="Sarabun" w:eastAsia="Sarabun" w:cs="Sarabun"/>';
+    const styles=X+'<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr>'+F+'<w:color w:val="'+DX.char+'"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="th-TH" w:eastAsia="th-TH" w:bidi="th-TH"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="80" w:line="288" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>'+
+      '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>'+
+      '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:before="0" w:after="60"/></w:pPr><w:rPr><w:b/><w:bCs/><w:color w:val="'+DX.red+'"/><w:sz w:val="52"/><w:szCs w:val="52"/></w:rPr></w:style>'+
+      '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:pBdr><w:bottom w:val="single" w:sz="12" w:space="3" w:color="'+DX.gold+'"/></w:pBdr><w:spacing w:before="360" w:after="140"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:bCs/><w:color w:val="'+DX.red+'"/><w:sz w:val="32"/><w:szCs w:val="32"/></w:rPr></w:style>'+
+      '<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="220" w:after="80"/><w:outlineLvl w:val="1"/></w:pPr><w:rPr><w:b/><w:bCs/><w:color w:val="'+DX.navy+'"/><w:sz w:val="26"/><w:szCs w:val="26"/></w:rPr></w:style>'+
+      '</w:styles>';
+    const R='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+    const docRels=X+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdStyles" Type="'+R+'/styles" Target="styles.xml"/><Relationship Id="rIdHdr" Type="'+R+'/header" Target="header1.xml"/><Relationship Id="rIdFtr" Type="'+R+'/footer" Target="footer1.xml"/>'+media.map(m=>'<Relationship Id="'+m.rid+'" Type="'+R+'/image" Target="media/'+m.name+'"/>').join('')+'</Relationships>';
+    const hdrRels=X+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdLogo" Type="'+R+'/image" Target="media/logo.png"/></Relationships>';
+    const ct=X+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>';
+    const now=new Date().toISOString().replace(/\.\d+Z$/,'Z');
+    const core=X+'<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>'+xe(info.product||'แผนธุรกิจ')+' · จาก BMC สู่ Pitch</dc:title><dc:creator>'+xe(info.name||'')+'</dc:creator><cp:keywords>PSC622</cp:keywords><dcterms:created xsi:type="dcterms:W3CDTF">'+now+'</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">'+now+'</dcterms:modified></cp:coreProperties>';
+    const rootRels=X+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="'+R+'/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>';
+    const z=new JSZip();
+    z.file('[Content_Types].xml',ct); z.file('_rels/.rels',rootRels); z.file('docProps/core.xml',core);
+    z.file('word/document.xml',doc); z.file('word/styles.xml',styles); z.file('word/header1.xml',header); z.file('word/footer1.xml',footer);
+    z.file('word/_rels/document.xml.rels',docRels); z.file('word/_rels/header1.xml.rels',hdrRels);
+    z.file('word/media/logo.png',logoBytes); media.forEach(m=>z.file('word/media/'+m.name,m.bytes));
+    return z.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',compression:'DEFLATE'});
+  }
+  async function exportDocx(msg){
+    const show=t=>{msg.hidden=false;msg.textContent=t};
+    if(!window.JSZip){show('โหลดเครื่องมือสร้างไฟล์ Word ไม่สำเร็จ ลองรีเฟรชหน้า');return}
+    show('กำลังสร้างไฟล์ Word…');
+    try{
+      const blob=await buildDocx();
+      const name='canvas-to-pitch-'+(info.product||'plan').replace(/[^\w฀-๿-]+/g,'-').slice(0,40)+'.docx';
+      if(window.claude&&typeof window.claude.use==='function'){
+        const dl=await window.claude.use('downloads');
+        if(dl){try{await dl.save({filename:name,data:blob});show('บันทึกไฟล์ Word แล้ว')}catch(e){show(e&&e.code==='declined'?'ยกเลิกการบันทึก':'บันทึกไฟล์ไม่สำเร็จ ('+(e&&e.code||'error')+')')}}
+        else show('หน้านี้บันทึกไฟล์ไม่ได้ในมุมมองนี้');
+      } else { const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);show('ดาวน์โหลดไฟล์ Word แล้ว') }
+    }catch(e){console.error(e);show('สร้างไฟล์ Word ไม่สำเร็จ: '+(e&&e.message||e))}
   }
 
   renderTabs(); render();
