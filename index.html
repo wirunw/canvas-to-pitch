@@ -125,6 +125,12 @@ input[type=number]{font-variant-numeric:tabular-nums}
 .inputs legend{font-weight:800;font-size:14px;padding:0 6px;color:var(--navy)}
 :root[data-theme="dark"] .inputs legend{color:var(--fill)}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .inputs legend{color:var(--fill)}}
+.inputs fieldset.off .inp{display:none}
+.offnote{display:none;margin:6px 0 0;font-size:13px;color:var(--muted)}
+.inputs fieldset.off .offnote{display:block}
+.sw{display:flex;gap:8px;align-items:flex-start;margin-top:6px;font-size:14px;font-weight:700;cursor:pointer}
+.sw input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--red);flex:none}
+.inputs fieldset.off{background:var(--sunk)}
 .inp{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:6px 10px;align-items:center;margin-top:8px}
 .inp label{margin:0;font-weight:600;font-size:14px}
 .inp .help{grid-column:1/-1;margin-top:-4px}
@@ -212,9 +218,10 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
   const FIN_DEF={price:390,unit_cost:140,channel_fee_pct:10,units_m1:150,growth_y1_pct:10,growth_y2_pct:4,growth_y3_pct:2,growth_y4_pct:1,growth_y5_pct:1,repeat_pct:15,credit_pct:0,
     project_price:60000,project_cost:25000,project_fee_pct:0,projects_y1:2,project_growth_pct:50,projects_max:8,project_credit_months:2,
     marketing_month:25000,staff_month:30000,rent_month:5000,other_month:4000,fixed_growth_pct:5,capacity_units_month:800,step_staff_month:20000,
-    startup_expense:80000,capex:120000,dep_years:5,equity:400000,loan:0,loan_rate_pct:6,loan_years:3,tax_pct:20};
+    startup_expense:80000,capex:120000,dep_years:5,equity:400000,loan:0,loan_rate_pct:6,loan_years:3,tax_pct:20,use_projects:0,use_capacity:0};
+  const FLAGS=['use_projects','use_capacity'];
   const FIN_META=[
-    ['สาย 1 · รายได้รายชิ้น / สมาชิก / ดิจิทัล',[
+    ['สาย 1 · รายได้รายชิ้น / สมาชิก / ดิจิทัล',null,[
       ['price','ราคาขายต่อชิ้น','บาท','ราคาที่ลูกค้าจ่าย (ก่อนหักค่าธรรมเนียม) ถ้าไม่มีสายนี้ใส่ 0'],
       ['unit_cost','ต้นทุนผันแปรต่อชิ้น','บาท','ผลิต + บรรจุ + ค่าส่ง ต่อชิ้น'],
       ['channel_fee_pct','ค่าธรรมเนียมช่องทาง','% ของยอดขาย','แพลตฟอร์ม ผู้จัดจำหน่าย หรือส่วนแบ่งร้านค้า'],
@@ -226,7 +233,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
       ['growth_y5_pct','ลูกค้าใหม่โตต่อเดือน ปีที่ 5','%',''],
       ['repeat_pct','ลูกค้าเดิมซื้อซ้ำในเดือนถัดไป','%','สินค้าใช้แล้วหมดหรือสมาชิกรายเดือนมักมีค่านี้ ถ้าไม่มีใส่ 0 (สูงสุด 95)'],
       ['credit_pct','ยอดขายสายนี้ที่ได้เงินช้า 1 เดือน','%','เช่น ขายร้านยาแบบเครดิต ใส่ 0 ถ้าได้เงินทันที']]],
-    ['สาย 2 · โครงการ / สัญญาองค์กร / ขายส่ง',[
+    ['สาย 2 · โครงการ / สัญญาองค์กร / ขายส่ง',['use_projects','ธุรกิจของฉันมีรายได้จากโครงการ สัญญาองค์กร หรือขายส่งเป็นล็อต','ปิดอยู่: ไม่นำสาย 2 ไปคิด เหมาะกับธุรกิจที่ขายสินค้าหรือบริการรายชิ้นอย่างเดียว'],[
       ['project_price','มูลค่าเฉลี่ยต่อโครงการหรือล็อต','บาท','งานบริการวิชาการ รับจ้างวิจัย/ผลิต ขายส่งโรงพยาบาล ถ้าไม่มีสายนี้ใส่ 0'],
       ['project_cost','ต้นทุนผันแปรต่อโครงการ','บาท','เช่น ค่าผู้ช่วย ค่าเดินทาง วัตถุดิบของล็อตนั้น'],
       ['project_fee_pct','ค่าธรรมเนียมหน่วยงาน / ส่วนแบ่ง','% ของมูลค่า','เช่น overhead มหาวิทยาลัย 10–15%'],
@@ -234,26 +241,27 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
       ['project_growth_pct','จำนวนโครงการเพิ่มขึ้นต่อปี','%',''],
       ['projects_max','เพดานที่ทีมรับไหวต่อปี','โครงการ','ใส่ 0 ถ้าไม่จำกัด'],
       ['project_credit_months','ระยะรอรับเงินหลังส่งงาน','เดือน','หน่วยงานรัฐหรือองค์กรใหญ่มักใช้ 1–3 เดือน (0–6)']]],
-    ['ค่าใช้จ่ายคงที่ต่อเดือน',[
+    ['ค่าใช้จ่ายคงที่ต่อเดือน',null,[
       ['marketing_month','การตลาด','บาท/เดือน','โฆษณา คอนเทนต์ KOL'],
       ['staff_month','เงินเดือนและค่าแรง (ทีมตั้งต้น)','บาท/เดือน',''],
       ['rent_month','ค่าเช่าและสาธารณูปโภค','บาท/เดือน',''],
       ['other_month','อื่น ๆ','บาท/เดือน','ซอฟต์แวร์ บัญชี เดินทาง'],
       ['fixed_growth_pct','ค่าใช้จ่ายคงที่เพิ่มขึ้นต่อปี','%','']]],
-    ['กำลังการผลิตของทีม (ต้นทุนขั้นบันได)',[
+    ['กำลังการผลิตของทีม (ต้นทุนขั้นบันได)',['use_capacity','คิดค่าจ้างเพิ่มเมื่อยอดขายเกินกำลังทีม','ปิดอยู่: ค่าจ้างเท่าทีมตั้งต้นตลอด 5 ปี (ปรับเพิ่มตามอัตราค่าใช้จ่ายคงที่เพิ่มขึ้นต่อปีเท่านั้น)'],[
       ['capacity_units_month','ทีมตั้งต้นรองรับได้สูงสุด','ชิ้น/เดือน','ยอดขายสาย 1 เกินระดับนี้เมื่อไหร่ต้องเพิ่มคน ใส่ 0 ถ้าไม่จำกัด'],
       ['step_staff_month','ค่าจ้างที่เพิ่มต่อขั้น','บาท/เดือน','เพิ่มทุกครั้งที่ยอดขายเกินอีกหนึ่งเท่าของกำลังตั้งต้น']]],
-    ['เงินลงทุนเริ่มต้น',[
+    ['เงินลงทุนเริ่มต้น',null,[
       ['startup_expense','ค่าใช้จ่ายก่อนเปิดขาย','บาท','ทดสอบ ขึ้นทะเบียน ออกแบบ (ลงเป็นค่าใช้จ่ายเดือนแรก)'],
       ['capex','เครื่องมือและสินทรัพย์','บาท','ซื้อเดือนแรก แล้วหักค่าเสื่อมราคา'],
       ['dep_years','อายุการใช้งาน','ปี','']]],
-    ['แหล่งเงินทุนและภาษี',[
+    ['แหล่งเงินทุนและภาษี',null,[
       ['equity','เงินทุนของเจ้าของ/ผู้ลงทุน','บาท',''],
       ['loan','เงินกู้','บาท',''],
       ['loan_rate_pct','ดอกเบี้ยเงินกู้ต่อปี','%',''],
       ['loan_years','ระยะผ่อนเงินกู้','ปี','ผ่อนเงินต้นเท่ากันทุกเดือน'],
       ['tax_pct','อัตราภาษีเงินได้','%','ใช้อัตราเดียวแบบง่าย ตรวจอัตราจริงกับกรมสรรพากร']]],
   ];
+  const activeMeta=()=>FIN_META.filter(([g,sw])=>!sw||+fin[sw[0]]).map(([g,sw,rows])=>[g,rows]);
   const SCEN={base:{n:'ฐาน',u:1,p:1},low:{n:'ระวัง',u:.7,p:.95},high:{n:'ดี',u:1.3,p:1}};
   const MODELS=['ทำแบรนด์เอง','ขายสิทธิ์ (Licensing)','รับจ้างผลิต (OEM)','ส่งวัตถุดิบ / สารสำคัญ','ขายบริการ','สมาชิก / เติมรายเดือน','แพลตฟอร์ม','กิจการเพื่อสังคม','ผสมหลายแบบ'];
 
@@ -270,7 +278,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
   try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(theme==='auto'&&tab===3)render()})}catch(e){}
   let info=Object.assign({name:'',product:'',model:'',cc:'',bmc:'',positioning:'',mnotes:'',story:'',market:'',ops:'',funding:'',evidence:'',responsible:'',draft:'',pitch:''},st.info||{});
   // numbers saved before the two-stream model keep their old results: new features start switched off
-  const NEUTRAL=(st.fin&&!('project_price' in st.fin))?{repeat_pct:0,project_price:0,projects_y1:0,capacity_units_month:0}:{};
+  const NEUTRAL=!st.fin?{}:!('project_price' in st.fin)?{repeat_pct:0}:!('use_projects' in st.fin)?{use_projects:(+st.fin.project_price>0&&+st.fin.projects_y1>0)?1:0,use_capacity:+st.fin.capacity_units_month>0?1:0}:{};
   let fin=Object.assign({},FIN_DEF,NEUTRAL,st.fin||{});
   let tab=Number.isInteger(st.tab)?st.tab:0, scen=st.scen||'base';
   function save(){try{localStorage.setItem(SK,JSON.stringify({info,fin,tab,scen}))}catch(e){}}
@@ -278,10 +286,10 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
   // ---------- model ----------
   function compute(f,sc){
     const s=SCEN[sc]||SCEN.base, N=60, M=[], v=k=>+f[k]||0;
-    const r=Math.min(Math.max(v('repeat_pct'),0),95)/100, cap=v('capacity_units_month'), pcm=Math.min(6,Math.max(0,Math.round(v('project_credit_months'))));
+    const r=Math.min(Math.max(v('repeat_pct'),0),95)/100, cap=v('use_capacity')?v('capacity_units_month'):0, pcm=Math.min(6,Math.max(0,Math.round(v('project_credit_months'))));
     const princ=v('loan_years')>0?v('loan')/(v('loan_years')*12):0, depM=v('dep_years')>0?v('capex')/(v('dep_years')*12):0;
     // stream 2: whole projects per year, capped, spread evenly across the months of that year
-    const projYear=[0]; for(let y=1;y<=5;y++){let n=v('projects_y1')*Math.pow(1+v('project_growth_pct')/100,y-1)*s.u; if(v('projects_max')>0)n=Math.min(n,v('projects_max')); projYear.push(v('project_price')>0?Math.max(0,Math.round(n)):0)}   // no price = no stream 2
+    const projYear=[0]; for(let y=1;y<=5;y++){let n=v('projects_y1')*Math.pow(1+v('project_growth_pct')/100,y-1)*s.u; if(v('projects_max')>0)n=Math.min(n,v('projects_max')); projYear.push(v('use_projects')&&v('project_price')>0?Math.max(0,Math.round(n)):0)}   // no price = no stream 2
     const projIn=m=>{const n=projYear[Math.ceil(m/12)], mi=(m-1)%12; let c=0; for(let k=0;k<n;k++) if(Math.min(11,Math.floor((k+.5)*12/n))===mi)c++; return c};
     const due=new Array(N+8).fill(0);
     let newU=0, prevU=0, loanBal=v('loan'), cash=0, lossCF=0, cumNI=0, cumDep=0, arBal=0, ebtYear=0, cumOp=0, payback=null, wasNeg=false, firstStep=null, maxSteps=0;
@@ -333,7 +341,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
     let minCash=Infinity,minM=0; M.forEach(x=>{if(x.cash<minCash){minCash=x.cash;minM=x.m}});
     const gm=Y[0].rev?Y[0].gp/Y[0].rev:0;
     const buys=1/(1-r), ltv=contrib*buys;
-    return {M,Y,contrib,pcontrib,fixedM,projM,beUnits,beMonth,minCash,minM,gm,payback,buys,ltv,firstStep,maxSteps,projYear,hasP:v('project_price')>0&&projYear.some(n=>n>0),hasU:v('price')>0&&v('units_m1')>0};
+    return {M,Y,contrib,pcontrib,fixedM,projM,beUnits,beMonth,minCash,minM,gm,payback,buys,ltv,firstStep,maxSteps,projYear,hasP:projYear.some(n=>n>0),capOn:cap>0,hasU:v('price')>0&&v('units_m1')>0};
   }
   // one list of key indicators for the page, the PDF and the Word file
   function kpiList(r){const Y=r.Y, sh=Y[4].rev?Y[4].rev2/Y[4].rev:0;
@@ -346,7 +354,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
       ['เงินสดต่ำสุด',fmtK(r.minCash)+' บาท','เดือนที่ '+r.minM+(r.minCash<0?' · ต้องหาเงินเพิ่ม':''),r.minCash<0?'bad':''],
       ['รายได้ปีที่ 5',fmtK(Y[4].rev)+' บาท','ปีที่ 1: '+fmtK(Y[0].rev)+(r.hasP?' · สาย 2 = '+(sh*100).toFixed(0)+'% ของปีที่ 5':''),''],
       ['กำไรสุทธิปีที่ 5',fmtK(Y[4].ni)+' บาท','สะสม 5 ปี: '+fmtK(Y[4].retained)+' · กำไรขั้นต้นปีที่ 1: '+(r.gm*100).toFixed(1)+'%',Y[4].ni>=0?'good':'bad'],
-      ['กำลังการผลิตของทีม',r.firstStep?'เพิ่มคนเดือนที่ '+r.firstStep:'ไม่เกินกำลัง',r.firstStep?'ต้องเพิ่มสูงสุด '+r.maxSteps+' ขั้น ภายใน 5 ปี':'ยอดขายสาย 1 ไม่เกินที่ทีมตั้งต้นรองรับ',r.firstStep?'warn':''],
+      ['กำลังการผลิตของทีม',!r.capOn?'ไม่ได้คิด':r.firstStep?'เพิ่มคนเดือนที่ '+r.firstStep:'ไม่เกินกำลัง',!r.capOn?'เปิดได้ในกลุ่ม “กำลังการผลิตของทีม”':r.firstStep?'ต้องเพิ่มสูงสุด '+r.maxSteps+' ขั้น ภายใน 5 ปี':'ยอดขายสาย 1 ไม่เกินที่ทีมตั้งต้นรองรับ',r.firstStep?'warn':''],
     ]}
   // ---------- formatting ----------
   const nf=new Intl.NumberFormat('th-TH',{maximumFractionDigits:0});
@@ -356,7 +364,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
 
   // ---------- prompts ----------
   const INFO_LBL={cc:'Concept Card',bmc:'BMC',positioning:'Positioning',mnotes:'สรุปการตลาด',story:'ปัญหาและนวัตกรรม',market:'ขนาดตลาด',ops:'แผนดำเนินงาน',funding:'เงินทุนและแผนใช้เงิน',evidence:'หลักฐานและความเสี่ยง',responsible:'ความรับผิดชอบและอ้างอิง',fin:'สรุปการเงิน',draft:'ร่างแผนธุรกิจ',pitch:'โครงสไลด์ pitch'};
-  const KEYS_LIST=Object.keys(FIN_DEF).join(', ');
+  const KEYS_LIST=Object.keys(FIN_DEF).filter(k=>!FLAGS.includes(k)).join(', ');
   const PROMPTS=[
     {id:'S1',sl:'1–4',g:'m',t:'ปัญหา insight และนวัตกรรม',fw:'Problem → Insight → Solution · Pains / Gains · Ten Types of Innovation',needs:['cc'],paste:'story',pasteL:'วางสรุปปัญหา insight ทางออก นวัตกรรม และ one-liner ที่เลือกแล้ว (ใช้ต่อในแผนธุรกิจและโครงสไลด์)',
      R:'คุณคือโค้ชด้านนวัตกรรมผลิตภัณฑ์สุขภาพ ที่ช่วยนักวิจัยเล่าเรื่องโดยเริ่มจากปัญหาจริงของผู้ใช้ ไม่ใช่เริ่มจากเทคโนโลยี',
@@ -396,7 +404,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
      F:'ตาราง: ระดับ | นิยาม | สูตร | สมมติฐาน | ค่าประมาณ | แหล่งที่ต้องตรวจ ตัวเลขที่ไม่มีแหล่งให้ใส่ (เดา) ห้ามแต่งชื่อรายงานหรือสถิติ ปิดท้ายด้วยสรุป 3 บรรทัดสำหรับใส่สไลด์'},
     {id:'F1',sl:'11–12',g:'f',t:'ตั้งสมมติฐานการเงิน สำหรับแบบจำลอง',fw:'Unit economics · Fixed vs variable cost · Funding',needs:['bmc'],import:true,
      R:'คุณคือที่ปรึกษาการเงินสำหรับธุรกิจผลิตภัณฑ์และบริการสุขภาพขนาดเล็กในประเทศไทย อธิบายด้วยภาษาง่าย และไม่แต่งตัวเลขที่ไม่มีที่มา',
-     T:['BMC:\n{bmc}','สรุปการตลาด: {mnotes}','ช่วยตั้งสมมติฐานการเงิน 5 ปี สำหรับแบบจำลองการเงินรายเดือน (60 เดือน) ใช้ key ต่อไปนี้เท่านั้น:\n'+KEYS_LIST+'\nความหมาย — สาย 1 รายชิ้น/สมาชิก: price ราคาต่อชิ้น · unit_cost ต้นทุนผันแปรต่อชิ้น · channel_fee_pct ค่าธรรมเนียมช่องทาง % · units_m1 ยอดขายจากลูกค้าใหม่เดือนแรก (ชิ้น) · growth_y1_pct ถึง growth_y5_pct การเติบโตของลูกค้าใหม่ต่อเดือนในแต่ละปี % (ปีหลัง ๆ ควรโตช้าลง) · repeat_pct ลูกค้าเดิมที่ซื้อซ้ำในเดือนถัดไป % · credit_pct ยอดขายสายนี้ที่ได้เงินช้า 1 เดือน %\nสาย 2 โครงการ/สัญญาองค์กร/ขายส่ง (ถ้าไม่มีให้ใส่ 0): project_price มูลค่าเฉลี่ยต่อโครงการ · project_cost ต้นทุนผันแปรต่อโครงการ · project_fee_pct ค่าธรรมเนียมหน่วยงาน % · projects_y1 จำนวนโครงการปีที่ 1 · project_growth_pct จำนวนโครงการเพิ่มต่อปี % · projects_max เพดานโครงการต่อปีที่ทีมรับไหว · project_credit_months เดือนที่รอรับเงินหลังส่งงาน\nค่าใช้จ่ายและกำลังการผลิต: marketing_month staff_month rent_month other_month ค่าใช้จ่ายคงที่ต่อเดือน · fixed_growth_pct การเพิ่มของค่าใช้จ่ายคงที่ต่อปี % · capacity_units_month ยอดขายสาย 1 สูงสุดต่อเดือนที่ทีมตั้งต้นรองรับ · step_staff_month ค่าจ้างที่ต้องเพิ่มต่อขั้นเมื่อเกินกำลัง\nเงินลงทุนและแหล่งเงิน: startup_expense ค่าใช้จ่ายก่อนเปิดขาย · capex เครื่องมือ/สินทรัพย์ · dep_years อายุใช้งาน · equity เงินทุนเจ้าของ · loan เงินกู้ · loan_rate_pct ดอกเบี้ยต่อปี · loan_years ปีที่ผ่อน · tax_pct อัตราภาษี\nก่อนตั้งตัวเลข ให้ถามตัวเองว่าธุรกิจของฉันมีรายได้สายไหนบ้าง แล้วใส่ 0 ในสายที่ไม่มี\nถ้าข้อมูลไม่พอ ให้ประมาณแบบระมัดระวัง และบอกในตารางว่าเป็นค่าที่เดา'],
+     T:['BMC:\n{bmc}','สรุปการตลาด: {mnotes}','ช่วยตั้งสมมติฐานการเงิน 5 ปี สำหรับแบบจำลองการเงินรายเดือน (60 เดือน) ใช้ key ต่อไปนี้เท่านั้น:\n'+KEYS_LIST+'\nความหมาย — สาย 1 รายชิ้น/สมาชิก: price ราคาต่อชิ้น · unit_cost ต้นทุนผันแปรต่อชิ้น · channel_fee_pct ค่าธรรมเนียมช่องทาง % · units_m1 ยอดขายจากลูกค้าใหม่เดือนแรก (ชิ้น) · growth_y1_pct ถึง growth_y5_pct การเติบโตของลูกค้าใหม่ต่อเดือนในแต่ละปี % (ปีหลัง ๆ ควรโตช้าลง) · repeat_pct ลูกค้าเดิมที่ซื้อซ้ำในเดือนถัดไป % · credit_pct ยอดขายสายนี้ที่ได้เงินช้า 1 เดือน %\nสาย 2 โครงการ/สัญญาองค์กร/ขายส่ง (ถ้าไม่มีให้ใส่ 0): project_price มูลค่าเฉลี่ยต่อโครงการ · project_cost ต้นทุนผันแปรต่อโครงการ · project_fee_pct ค่าธรรมเนียมหน่วยงาน % · projects_y1 จำนวนโครงการปีที่ 1 · project_growth_pct จำนวนโครงการเพิ่มต่อปี % · projects_max เพดานโครงการต่อปีที่ทีมรับไหว · project_credit_months เดือนที่รอรับเงินหลังส่งงาน\nค่าใช้จ่ายและกำลังการผลิต: marketing_month staff_month rent_month other_month ค่าใช้จ่ายคงที่ต่อเดือน · fixed_growth_pct การเพิ่มของค่าใช้จ่ายคงที่ต่อปี % · capacity_units_month ยอดขายสาย 1 สูงสุดต่อเดือนที่ทีมตั้งต้นรองรับ · step_staff_month ค่าจ้างที่ต้องเพิ่มต่อขั้นเมื่อเกินกำลัง\nเงินลงทุนและแหล่งเงิน: startup_expense ค่าใช้จ่ายก่อนเปิดขาย · capex เครื่องมือ/สินทรัพย์ · dep_years อายุใช้งาน · equity เงินทุนเจ้าของ · loan เงินกู้ · loan_rate_pct ดอกเบี้ยต่อปี · loan_years ปีที่ผ่อน · tax_pct อัตราภาษี\nก่อนตั้งตัวเลข ให้ดูว่าธุรกิจของฉันมีรายได้สายไหนบ้าง ถ้าขายรายชิ้นอย่างเดียวให้ใส่ project_price = 0 และ projects_y1 = 0 ถ้าไม่ต้องการคิดกำลังการผลิตให้ใส่ capacity_units_month = 0 (ระบบจะปิดส่วนนั้นให้เอง)\nถ้าข้อมูลไม่พอ ให้ประมาณแบบระมัดระวัง และบอกในตารางว่าเป็นค่าที่เดา'],
      F:'ส่วนที่ 1: บล็อกโค้ดหนึ่งบล็อก บรรทัดละ key = value เป็นตัวเลขล้วน ไม่มีหน่วย ไม่มีจุลภาค\nส่วนที่ 2: ตาราง key | ค่า | เหตุผล | ควรตรวจจากแหล่งไหน | (เดา) หรือ (มีข้อมูล)'},
     {id:'P1',sl:'10',g:'b',t:'การดำเนินงาน พาร์ทเนอร์ กฎระเบียบ และคุณภาพ',fw:'Operations (คน เงิน ของ ข้อมูล เวลา) · เส้นทางกฎระเบียบ · ระบบคุณภาพ · IP',needs:['bmc'],paste:'ops',pasteL:'วางสรุปแผนดำเนินงานและเส้นทางกฎระเบียบ (ใช้ต่อในแผนธุรกิจและโครงสไลด์)',
      R:'คุณคือผู้จัดการโครงการพัฒนาผลิตภัณฑ์สุขภาพ ที่เคยพาผลงานวิจัยไปถึงการผลิตและการขายในประเทศไทย และรู้ว่าแต่ละประเภทผลิตภัณฑ์มีเส้นทางกฎหมายต่างกัน',
@@ -434,7 +442,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
       (r.hasU?'• สาย 1 รายชิ้น/สมาชิก: ราคา '+fmt(f.price)+' บาท · ต้นทุนผันแปร '+fmt(f.unit_cost)+' บาท/ชิ้น · ค่าธรรมเนียม '+f.channel_fee_pct+'% · กำไรส่วนเกินต่อชิ้น '+fmt(r.contrib)+' บาท · ลูกค้าเดิมซื้อซ้ำ '+f.repeat_pct+'%/เดือน (ซื้อเฉลี่ย '+r.buys.toFixed(1)+' ครั้ง, LTV '+fmt(r.ltv)+' บาท)\n':'• ไม่มีรายได้สาย 1 (รายชิ้น)\n')+
       (r.hasP?'• สาย 2 โครงการ/องค์กร: มูลค่า '+fmt(f.project_price)+' บาท/โครงการ · ต้นทุน '+fmt(f.project_cost)+' บาท · ค่าธรรมเนียมหน่วยงาน '+f.project_fee_pct+'% · กำไรส่วนเกิน '+fmt(r.pcontrib)+' บาท/โครงการ · จำนวนโครงการ ปี 1–5: '+r.projYear.slice(1).join(' / ')+' (เพดาน '+(+f.projects_max||'ไม่จำกัด')+') · รอรับเงิน '+f.project_credit_months+' เดือน\n':'• ไม่มีรายได้สาย 2 (โครงการ)\n')+
       '• ค่าใช้จ่ายคงที่เดือนแรก '+fmt(r.fixedM)+' บาท → จุดคุ้มทุนสาย 1 '+(r.beUnits===0?'ไม่ต้องขายเพิ่ม (กำไรจากโครงการครอบคลุมแล้ว)':isFinite(r.beUnits)?fmt(r.beUnits)+' ชิ้น/เดือน':'ยังไม่คุ้มทุน (ราคาต่ำกว่าต้นทุน)')+(r.beMonth?' · กำไรจากการดำเนินงานเป็นบวกครั้งแรกเดือนที่ '+r.beMonth:'')+'\n'+
-      '• กำลังการผลิต: '+(r.firstStep?'ยอดขายเกินที่ทีมตั้งต้นรองรับในเดือนที่ '+r.firstStep+' ต้องเพิ่มคนสูงสุด '+r.maxSteps+' ขั้น':'ไม่เกินกำลังทีมตั้งต้นใน 5 ปี')+'\n'+
+      '• กำลังการผลิต: '+(!r.capOn?'ไม่ได้คิดค่าจ้างเพิ่มตามกำลังการผลิต':r.firstStep?'ยอดขายเกินที่ทีมตั้งต้นรองรับในเดือนที่ '+r.firstStep+' ต้องเพิ่มคนสูงสุด '+r.maxSteps+' ขั้น':'ไม่เกินกำลังทีมตั้งต้นใน 5 ปี')+'\n'+
       '• รายได้ ปี 1–5: '+Y.map(o=>fmt(o.rev)).join(' / ')+' บาท'+(r.hasP&&r.hasU?' (สาย 2: '+Y.map(o=>fmt(o.rev2)).join(' / ')+')':'')+'\n'+
       '• กำไรขั้นต้น ปี 1–5: '+Y.map(o=>fmt(o.gp)).join(' / ')+' บาท\n'+
       '• กำไรสุทธิ ปี 1–5: '+Y.map(o=>fmt(o.ni)).join(' / ')+' บาท · กำไรสะสม 5 ปี '+fmt(Y[4].retained)+' บาท · อัตรากำไรขั้นต้นปี 1 '+(r.gm*100).toFixed(1)+'%\n'+
@@ -485,6 +493,8 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
     const di=root.querySelector('#doImport'); if(di) di.addEventListener('click',()=>{
       const txt=$('#importBox').value; let n=0; const bad=[];
       txt.split(/\r?\n/).forEach(line=>{const m=line.replace(/[`*|]/g,' ').match(/^\s*([a-z_0-9]+)\s*[=:]\s*(-?[\d.,]+)/i); if(!m)return; const k=m[1].toLowerCase(); if(!(k in FIN_DEF)){bad.push(k);return} const v=parseFloat(m[2].replace(/,/g,'')); if(isFinite(v)){fin[k]=v;n++}});
+      if(/project_price|projects_y1/.test(txt)) fin.use_projects=(+fin.project_price>0&&+fin.projects_y1>0)?1:0;
+      if(/capacity_units_month/.test(txt)) fin.use_capacity=+fin.capacity_units_month>0?1:0;
       save(); const msg=$('#importMsg'); msg.hidden=false; msg.textContent=n?('เติมแล้ว '+n+' ค่า ไปดูผลในแท็บ “จำลองการเงิน”'):'ไม่พบบรรทัดแบบ key = value ลองวางเฉพาะบล็อกโค้ดจาก AI';
       if(n){const g=document.createElement('button');g.type='button';g.textContent='ไปที่จำลองการเงิน →';g.addEventListener('click',()=>go(3));msg.after(g)}
     });
@@ -556,7 +566,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
       '<div class="row" style="margin-top:10px"><span class="note">สถานการณ์:</span><div class="seg" role="group" aria-label="สถานการณ์">'+Object.entries(SCEN).map(([k,s])=>'<button type="button" data-scen="'+k+'" aria-pressed="'+(k===scen)+'">'+s.n+'</button>').join('')+'</div>'+
       '<span style="flex:1"></span><button type="button" id="copyTSV">คัดลอกงบเป็นตาราง</button><button type="button" class="primary" id="pdf1">ส่งออกรายงานการเงิน (PDF)</button></div>'+
       '<div class="row"><span class="copied" id="simMsg" hidden></span></div><p class="note" style="margin:6px 0 0">ระวัง = ยอดขาย 70% ราคา 95% ของฐาน · ดี = ยอดขาย 130% ของฐาน</p></div>'+
-      '<div class="sim"><form class="inputs" id="finForm" autocomplete="off">'+FIN_META.map(([g,rows])=>'<fieldset><legend>'+g+'</legend>'+rows.map(([k,l,u,h])=>'<div class="inp"><label for="n_'+k+'">'+l+' <span class="unit">('+u+')</span></label><input type="number" step="any" id="n_'+k+'" data-k="'+k+'" value="'+fin[k]+'">'+(h?'<div class="help">'+h+'</div>':'')+'</div>').join('')+'</fieldset>').join('')+'<div class="row" style="margin-top:10px"><button type="button" id="reset">กลับเป็นตัวเลขตัวอย่าง</button></div></form>'+
+      '<div class="sim"><form class="inputs" id="finForm" autocomplete="off">'+FIN_META.map(([g,sw,rows])=>'<fieldset'+(sw&&!+fin[sw[0]]?' class="off"':'')+'><legend>'+g+'</legend>'+(sw?'<label class="sw"><input type="checkbox" data-flag="'+sw[0]+'"'+(+fin[sw[0]]?' checked':'')+'><span>'+sw[1]+'</span></label><p class="offnote">'+sw[2]+'</p>':'')+rows.map(([k,l,u,h])=>'<div class="inp"><label for="n_'+k+'">'+l+' <span class="unit">('+u+')</span></label><input type="number" step="any" id="n_'+k+'" data-k="'+k+'" value="'+fin[k]+'">'+(h?'<div class="help">'+h+'</div>':'')+'</div>').join('')+'</fieldset>').join('')+'<div class="row" style="margin-top:10px"><button type="button" id="reset">กลับเป็นตัวเลขตัวอย่าง</button></div></form>'+
       '<div class="out"><div class="kpis" id="kpis"></div>'+
       '<div class="charts"><div class="card"><h3>รายได้และค่าใช้จ่ายรายเดือน</h3><div class="chartbox"><canvas id="ch1" aria-label="กราฟรายได้และค่าใช้จ่ายรายเดือน"></canvas></div></div>'+
       '<div class="card"><h3>เงินสดคงเหลือ 3 สถานการณ์</h3><div class="chartbox"><canvas id="ch2" aria-label="กราฟเงินสดคงเหลือ"></canvas></div></div>'+
@@ -566,10 +576,11 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
       '<div class="card"><h3>งบกระแสเงินสด (บาท)</h3><div class="tablewrap" id="cfT"></div></div>'+
       '<div class="card"><h3>งบแสดงฐานะการเงิน ณ สิ้นปี (บาท)</h3><div class="tablewrap" id="bsT"></div><p class="check" id="bsCheck"></p></div>'+
       '<details class="card ref"><summary><b>วิธีคำนวณและข้อจำกัด</b></summary><ul>'+
-      '<li>มีรายได้ 2 สาย ใส่ 0 ในสายที่ไม่มี · สาย 1 ยอดขายเดือนนี้ = ลูกค้าใหม่ (โตแบบทบต้นตามอัตราของแต่ละปี) + ยอดขายเดือนก่อน × อัตราซื้อซ้ำ · สาย 2 นับเป็นโครงการเต็ม ปัดเป็นจำนวนเต็ม ไม่เกินเพดาน และกระจายลงเดือนต่าง ๆ ของปีนั้น</li><li>กำไรส่วนเกินต่อชิ้น = ราคา × (1 − ค่าธรรมเนียม%) − ต้นทุนต่อชิ้น · จุดคุ้มทุนสาย 1 = (ค่าใช้จ่ายคงที่ต่อเดือน − กำไรจากโครงการเฉลี่ยต่อเดือนในปีที่ 1) ÷ กำไรส่วนเกินต่อชิ้น · LTV = กำไรส่วนเกินต่อชิ้น ÷ (1 − อัตราซื้อซ้ำ)</li><li>เงินสด: สาย 1 ได้ทันทีหรือช้า 1 เดือนตามที่กำหนด สาย 2 ได้หลังส่งงานตามจำนวนเดือนที่รอ ส่วนที่ยังไม่ได้รับอยู่ในลูกหนี้การค้า · ถ้ายอดขายสาย 1 เกินกำลังทีมตั้งต้น จะเพิ่มค่าจ้างทีละขั้น</li>'+
+      '<li>สาย 2 และกำลังการผลิตปิดไว้เป็นค่าเริ่มต้น เปิดได้ที่ช่องติ๊กของแต่ละกลุ่ม · สาย 1 ยอดขายเดือนนี้ = ลูกค้าใหม่ (โตแบบทบต้นตามอัตราของแต่ละปี) + ยอดขายเดือนก่อน × อัตราซื้อซ้ำ · สาย 2 นับเป็นโครงการเต็ม ปัดเป็นจำนวนเต็ม ไม่เกินเพดาน และกระจายลงเดือนต่าง ๆ ของปีนั้น</li><li>กำไรส่วนเกินต่อชิ้น = ราคา × (1 − ค่าธรรมเนียม%) − ต้นทุนต่อชิ้น · จุดคุ้มทุนสาย 1 = (ค่าใช้จ่ายคงที่ต่อเดือน − กำไรจากโครงการเฉลี่ยต่อเดือนในปีที่ 1) ÷ กำไรส่วนเกินต่อชิ้น · LTV = กำไรส่วนเกินต่อชิ้น ÷ (1 − อัตราซื้อซ้ำ)</li><li>เงินสด: สาย 1 ได้ทันทีหรือช้า 1 เดือนตามที่กำหนด สาย 2 ได้หลังส่งงานตามจำนวนเดือนที่รอ ส่วนที่ยังไม่ได้รับอยู่ในลูกหนี้การค้า · ถ้ายอดขายสาย 1 เกินกำลังทีมตั้งต้น จะเพิ่มค่าจ้างทีละขั้น</li>'+
       '<li>ค่าใช้จ่ายก่อนเปิดขายลงเป็นค่าใช้จ่ายเดือนแรก · สินทรัพย์หักค่าเสื่อมราคาแบบเส้นตรง · เงินกู้ผ่อนเงินต้นเท่ากันทุกเดือน</li><li>ภาษีคิดและจ่ายปีละครั้งที่เดือน 12, 24, 36, 48 และ 60 (เงินสดจึงลดลงในเดือนนั้น) จากกำไรก่อนภาษี และยกขาดทุนไปหักปีถัดไปได้ ใช้อัตราเดียวแบบง่าย ไม่ใช่การคำนวณภาษีจริง</li>'+
       '<li>ไม่ได้คิดสินค้าคงคลัง เจ้าหนี้การค้า และภาษีมูลค่าเพิ่ม · ใช้เพื่อการเรียนรู้และ pitch เบื้องต้น ก่อนลงทุนจริงควรให้นักบัญชีตรวจ</li></ul></details>'+
       '</div></div></section>';
+    $('#finForm').addEventListener('change',e=>{const fl=e.target.dataset.flag;if(!fl)return;fin[fl]=e.target.checked?1:0;e.target.closest('fieldset').classList.toggle('off',!e.target.checked);save();updateSim()});
     $('#finForm').addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;const v=parseFloat(e.target.value);fin[k]=isFinite(v)?v:0;save();updateSim()});
     $('#finForm').addEventListener('submit',e=>e.preventDefault());
     app.querySelectorAll('[data-scen]').forEach(b=>b.addEventListener('click',()=>{scen=b.dataset.scen;save();app.querySelectorAll('[data-scen]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.scen===scen));updateSim()}));
@@ -578,10 +589,11 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
     $('#pdf1').addEventListener('click',()=>exportPDF($('#simMsg')));
     buildCharts(); updateSim(); addNav(app);
   }
-  function rowsIS(Y){return [
+  function rowsIS(Y){const hide=[]; if(!+fin.use_projects)hide.push('rev2'); if(!+fin.use_capacity)hide.push('stepStaff');
+    return [
     ['รายได้สาย 1: รายชิ้น / สมาชิก','rev1','ind'],['รายได้สาย 2: โครงการ / องค์กร','rev2','ind'],['รายได้รวม','rev','sub'],['ต้นทุนผันแปร (สินค้าและโครงการ)','cogs','ind',-1],['ค่าธรรมเนียมช่องทางและหน่วยงาน','fee','ind',-1],['กำไรขั้นต้น','gp','sub'],
     ['การตลาด','mkt','ind',-1],['เงินเดือนและค่าแรง (ทีมตั้งต้น)','staff','ind',-1],['ค่าจ้างเพิ่มตามกำลังการผลิต','stepStaff','ind',-1],['ค่าเช่าและสาธารณูปโภค','rent','ind',-1],['อื่น ๆ','other','ind',-1],['ค่าใช้จ่ายก่อนเปิดขาย','startup','ind',-1],['ค่าเสื่อมราคา','dep','ind',-1],
-    ['กำไรจากการดำเนินงาน (EBIT)','ebit','sub'],['ดอกเบี้ยจ่าย','interest','ind',-1],['กำไรก่อนภาษี','ebt',''],['ภาษีเงินได้','tax','ind',-1],['กำไรสุทธิ','ni','tot']]}
+    ['กำไรจากการดำเนินงาน (EBIT)','ebit','sub'],['ดอกเบี้ยจ่าย','interest','ind',-1],['กำไรก่อนภาษี','ebt',''],['ภาษีเงินได้','tax','ind',-1],['กำไรสุทธิ','ni','tot']].filter(r=>!hide.includes(r[1])).map(r=>r[1]==='rev1'&&!+fin.use_projects?['รายได้จากการขาย (สาย 1)','rev1','ind']:r)}
   function rowsCF(){return [['เงินสดต้นปี','cashBeg',''],['กำไรสุทธิ','ni','ind'],['บวก ค่าเสื่อมราคา','dep','ind'],['หัก ลูกหนี้เพิ่มขึ้น','dAR','ind'],['เงินสดจากการดำเนินงาน','cfo','sub'],['เงินสดจากการลงทุน','cfi','sub'],['เงินสดจากการจัดหาเงิน','cff','sub'],['เงินสดเพิ่ม (ลด) สุทธิ','net',''],['เงินสดปลายปี','cashEnd','tot']]}
   function rowsBS(){return [['เงินสด','cashEnd','ind'],['ลูกหนี้การค้า','ar','ind'],['สินทรัพย์ถาวรสุทธิ','fa','ind'],['รวมสินทรัพย์','assets','sub'],['เงินกู้คงเหลือ','loan','ind'],['ทุน','paid','ind'],['กำไร (ขาดทุน) สะสม','retained','ind'],['รวมหนี้สินและส่วนของเจ้าของ','le','tot']]}
   function tableHTML(rows,Y){
@@ -645,7 +657,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
       const d=new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
       const foot=n=>'<div class="foot"><span>'+esc(info.product||'แผนธุรกิจ')+' · '+esc(info.name||'')+' · สถานการณ์ '+SCEN[scen].n+'</span><span>หน้า '+n+' · คณะเภสัชศาสตร์ มหาวิทยาลัยธรรมศาสตร์</span></div>';
       const kp=kpiList(r).map(x=>[x[0],x[1]]);
-      const assum='<div style="columns:2;column-gap:26px">'+FIN_META.map(([g,rows])=>'<table style="break-inside:avoid;margin-bottom:12px"><thead><tr><th colspan="2" style="text-align:left">'+g+'</th></tr></thead><tbody>'+rows.map(([k,l,u])=>'<tr><td>'+l+'</td><td>'+fmt(fin[k])+' '+u+'</td></tr>').join('')+'</tbody></table>').join('')+'</div>';
+      const assum='<div style="columns:2;column-gap:26px">'+activeMeta().map(([g,rows])=>'<table style="break-inside:avoid;margin-bottom:12px"><thead><tr><th colspan="2" style="text-align:left">'+g+'</th></tr></thead><tbody>'+rows.map(([k,l,u])=>'<tr><td>'+l+'</td><td>'+fmt(fin[k])+' '+u+'</td></tr>').join('')+'</tbody></table>').join('')+'</div>';
       const tbl=rows=>{const t=document.createElement('div');t.innerHTML=tableHTML(rows,Y);return t.innerHTML};
       const pages=[
         '<div style="display:flex;align-items:center;gap:14px"><img src="'+LOGO_SRC+'" style="width:56px"><div><div style="font-size:12px;color:#5F5F5F">รายงานแบบจำลองการเงิน · PSC622</div><h1>'+esc(info.product||'แผนธุรกิจของฉัน')+'</h1><div style="font-size:13px">'+esc(info.name||'')+(info.model?' · โมเดล: '+esc(info.model):'')+' · '+d+'</div></div></div>'+
@@ -758,7 +770,7 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
     b+=H2('ตัวชี้วัดสำคัญ');
     b+=dTable([['ตัวชี้วัด','ค่า','หมายเหตุ']].concat(kpiList(r).map(x=>[x[0],x[1],x[2]])).concat([['คืนทุน',r.payback?'เดือนที่ '+r.payback:'ยังไม่คืนทุนใน 5 ปี','เงินสดสะสมจากการดำเนินงานกลับมาเป็นบวก']]),[3300,2300,W-5600],{header:true,sz:19});
     b+=H2('สมมติฐาน');
-    const ar=[['รายการ','ค่า']]; FIN_META.forEach(([g,rows])=>{ar.push({kind:'grp',span:true,cells:[g]});rows.forEach(([k,l,u])=>ar.push({kind:'ind',cells:[l,fmt(fin[k])+' '+u]}))});
+    const ar=[['รายการ','ค่า']]; activeMeta().forEach(([g,rows])=>{ar.push({kind:'grp',span:true,cells:[g]});rows.forEach(([k,l,u])=>ar.push({kind:'ind',cells:[l,fmt(fin[k])+' '+u]}))});
     b+=dTable(ar,[6000,W-6000],{header:true,sz:19});
     const fsRows=rows=>[['รายการ'].concat(Y.map(o=>'ปีที่ '+o.y))].concat(rows.map(([l,k,cls,sign])=>({kind:cls||'',cells:[l].concat(Y.map((o,i)=>{let v=k==='dAR'?-(o.ar-(i?Y[i-1].ar:0)):o[k];if(sign===-1)v=-v;return fmt(v)}))})));
     const fw=[3138,1300,1300,1300,1300,1300];
