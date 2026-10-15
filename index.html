@@ -269,7 +269,9 @@ footer.site{background:var(--crim);color:#fff;font-size:13px;padding-block:12px;
   document.getElementById('themeBtn').addEventListener('click',()=>{const i=TMODES.findIndex(x=>x[0]===theme); theme=TMODES[(i+1)%TMODES.length][0]; try{localStorage.setItem(TK,theme)}catch(e){} applyTheme(); if(tab===3)render()});
   try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(theme==='auto'&&tab===3)render()})}catch(e){}
   let info=Object.assign({name:'',product:'',model:'',cc:'',bmc:'',positioning:'',mnotes:'',story:'',market:'',ops:'',funding:'',evidence:'',responsible:'',draft:'',pitch:''},st.info||{});
-  let fin=Object.assign({},FIN_DEF,st.fin||{});
+  // numbers saved before the two-stream model keep their old results: new features start switched off
+  const NEUTRAL=(st.fin&&!('project_price' in st.fin))?{repeat_pct:0,project_price:0,projects_y1:0,capacity_units_month:0}:{};
+  let fin=Object.assign({},FIN_DEF,NEUTRAL,st.fin||{});
   let tab=Number.isInteger(st.tab)?st.tab:0, scen=st.scen||'base';
   function save(){try{localStorage.setItem(SK,JSON.stringify({info,fin,tab,scen}))}catch(e){}}
 
